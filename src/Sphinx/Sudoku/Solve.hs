@@ -14,7 +14,8 @@ module Sphinx.Sudoku.Solve
   ) where
 
 import Data.Bits ((.|.), (.&.), shiftL, complement, popCount, testBit)
-import Data.List (foldl', minimumBy)
+import Data.List (minimumBy)
+import qualified Data.List as L
 import Data.Ord (comparing)
 import qualified Data.Vector as V
 
@@ -64,7 +65,7 @@ candidateMask g i
 
 -- Bits for the digits already placed in any peer of cell i.
 usedMask :: Grid -> Int -> Int
-usedMask g i = foldl' (.|.) 0 [ bitFor (getCell g j) | j <- peers V.! i ]
+usedMask g i = L.foldl' (.|.) 0 [ bitFor (getCell g j) | j <- peers V.! i ]
   where
     bitFor d
       | d >= 1 && d <= 9 = 1 `shiftL` (d - 1)

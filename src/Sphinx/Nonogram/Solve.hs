@@ -89,7 +89,7 @@ propagateOnce puzzle g =
     gridRows' = gridRows puzzle
 
 propagateLines :: Nonogram -> Int -> [[Int]] -> MGrid -> (MGrid, Bool, Bool)
-propagateLines _ lineLen clues g0 = foldl' step (g0, False, False) (zip [0 ..] clues)
+propagateLines _ lineLen clues g0 = L.foldl' step (g0, False, False) (zip [0 ..] clues)
   where
     step (gg, ch, ct) (idx, lineClues)
       | ct = (gg, ch, ct)

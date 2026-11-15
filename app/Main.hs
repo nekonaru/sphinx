@@ -12,10 +12,12 @@ import System.Exit (exitFailure)
 import System.IO (hPutStrLn, stderr, withFile, IOMode(ReadMode), hGetContents)
 
 import Sphinx.Class (Puzzle(..))
+import Sphinx.Nonogram.Puzzle ()
 import Sphinx.Error (renderError)
 import qualified Sphinx.Nonogram.Solve as Nonogram
 import qualified Sphinx.Nonogram.Render as NRender
 import qualified Sphinx.Sudoku.Generate as Gen
+import Sphinx.Sudoku.Puzzle ()
 import Sphinx.Sudoku.Render (renderGrid, renderSteps)
 import qualified Sphinx.Sudoku.Solve as Sudoku
 

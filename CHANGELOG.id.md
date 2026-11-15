@@ -27,7 +27,7 @@ Rilis publik pertama.
   API library, format input, dan catatan algoritma.
 - Property test (QuickCheck) dan golden test untuk renderer.
 - CI di GitHub Actions: build dengan `-Werror` dan seluruh test suite
-  pada GHC 9.6 dan 9.10.
+  pada GHC 9.6, 9.8 dan 9.10.
 
 ### Perbaikan bug
 

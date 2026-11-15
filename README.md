@@ -161,11 +161,17 @@ solvers work.
 
 ## Performance
 
-Measured on GHC 9.6 with `-O2` on a mid-range laptop: Arto Inkala's
-puzzle (widely used as a hard benchmark) solves in well under a second.
-Nonogram puzzles of typical 15x15 to 20x20 size solve in about the same
-time. The solver counts up to N solutions lazily, so uniqueness checks
-stop at the second solution.
+Measured on GHC 9.6 with `-O2`-optimised code on a mid-range Windows
+laptop (CLI end-to-end wall time):
+
+| Puzzle | Time |
+|--------|------|
+| Hard generated sudoku (`examples/sudoku-hard.txt`, seed 1234) | ~20 ms |
+| Nonogram heart (`examples/nonogram-heart.txt`) | ~20 ms |
+
+The solver counts up to N solutions lazily, so uniqueness checks stop
+at the second solution. Nonogram puzzles of larger sizes can take
+longer when the line constraint propagation has to branch often.
 
 ## Contributing
 

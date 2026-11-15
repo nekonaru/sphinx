@@ -27,7 +27,7 @@ First public release.
   usage, library API, input formats, and algorithm notes.
 - Property-based tests (QuickCheck) and golden tests for the renderers.
 - CI on GitHub Actions: build with `-Werror` and the full test suite
-  on GHC 9.6 and 9.10.
+  on GHC 9.6, 9.8 and 9.10.
 
 ### Bug fixes
 

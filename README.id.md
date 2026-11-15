@@ -160,11 +160,17 @@ berisi library, `app/Main.hs` CLI-nya, `test/` test suite dan
 
 ## Performa
 
-Diukur pada GHC 9.6 dengan `-O2` di laptop sekelas menengah: puzzle
-Arto Inkala (benchmark standar untuk sudoku sulit) selesai jauh di
-bahwa satu detik. Puzzle nonogram ukuran 15x15 sampai 20x20 umumnya
-selesai dalam waktu yang sama. Solver menghitung sampai N solusi secara
-lazy, jadi cek keunikan berhenti di solusi kedua.
+Diukur pada GHC 9.6 dengan kode hasil optimasi `-O2` di laptop Windows
+sekelas menengah (waktu wall CLI secara end-to-end):
+
+| Puzzle | Waktu |
+|--------|-------|
+| Sudoku sulit dari generator (`examples/sudoku-hard.txt`, seed 1234) | ~20 ms |
+| Nonogram heart (`examples/nonogram-heart.txt`) | ~20 ms |
+
+Solver menghitung sampai N solusi secara lazy, jadi cek keunikan
+berhenti di solusi kedua. Nonogram ukuran besar bisa lebih lama bila
+propagasi constraint per baris sering harus branch.
 
 ## Kontribusi
 

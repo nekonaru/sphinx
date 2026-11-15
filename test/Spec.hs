@@ -1,7 +1,10 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 -- | Sphinx test suite: unit tests for parsing and solving, property
 -- tests for solver guarantees, and golden tests for the renderers.
 module Main (main) where
 
+import Data.List (intercalate)
 import Data.Word (Word64)
 import Test.QuickCheck
 import Test.Hspec
@@ -14,8 +17,11 @@ import qualified Sphinx.Nonogram.Line as NLine
 import Sphinx.Nonogram.Parse (parseNonogram)
 import qualified Sphinx.Nonogram.Render as NRender
 import qualified Sphinx.Nonogram.Solve as NS
-import Sphinx.Nonogram.Types
+import Sphinx.Nonogram.Types (Nonogram(..), gridRows, gridCols, filledCount)
+import qualified Sphinx.Nonogram.Types as NT
 import qualified Sphinx.Sudoku.Generate as Gen
+import Sphinx.Sudoku.Puzzle ()
+import Sphinx.Nonogram.Puzzle ()
 import qualified Sphinx.Sudoku.Parse as SP
 import Sphinx.Sudoku.Render (renderGrid)
 import Sphinx.Sudoku.Solve (Step(..), solveUpTo, solveWithSteps)
@@ -58,7 +64,7 @@ parseSpec = describe "Sudoku parsing" $ do
     SP.parseSudoku ("11" ++ replicate 79 '.') `shouldBe` Left (SudokuConflict "baris 1 (digit 1)")
 
   it "rejects duplicate givens in a box" $
-    SP.parseSudoku ("1........" ++ ".......1." ++ replicate 63 '.') `shouldBe` Left (SudokuConflict "kotak 1 (digit 1)")
+    SP.parseSudoku ("1........" ++ ".1......." ++ replicate 63 '.') `shouldBe` Left (SudokuConflict "kotak 1 (digit 1)")
 
   it "rejects non-ASCII Unicode digits" $
     SP.parseSudoku ("7" ++ "٣" ++ replicate 79 '.') `shouldBe` Left (SudokuInvalidChar 1 '٣')
@@ -158,9 +164,10 @@ nonogramSpec = describe "Nonogram" $ do
   it "enumerates the empty filling for empty clues" $
     NLine.arrangements 4 [] `shouldBe` [ [False, False, False, False] ]
 
-  it "enumerates exactly the two fillings for 2+2 in length 6" $
+  it "enumerates exactly the three fillings for 2+2 in length 6" $
     NLine.arrangements 6 [2, 2] `shouldBe`
       [ [True, True, False, True, True, False]
+      , [True, True, False, False, True, True]
       , [False, True, True, False, True, True]
       ]
 
@@ -239,7 +246,7 @@ goldenSpec = describe "Golden rendering" $ do
 -- Helpers ------------------------------------------------------------
 
 expectedEasyGrid :: String
-expectedEasyGrid = unlines
+expectedEasyGrid = intercalate "\n"
   [ "+-------+-------+-------+"
   , "| 5 3 4 | 6 7 8 | 9 1 2 |"
   , "| 6 7 2 | 1 9 5 | 3 4 8 |"
@@ -281,5 +288,5 @@ isJustOk (Just _) = True
 isJustOk Nothing = False
 
 -- The nonogram heart solution rendering, via the renderer.
-renderNonogram :: Nonogram -> Solution -> String
+renderNonogram :: Nonogram -> NT.Solution -> String
 renderNonogram = NRender.renderSolution

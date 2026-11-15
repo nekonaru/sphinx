@@ -8,13 +8,16 @@ module Golden
   ) where
 
 import System.Exit (exitFailure)
-import System.IO (hPutStrLn, stderr)
+import System.IO (hPutStrLn, stderr, withFile, hGetContents, hSetEncoding, IOMode(ReadMode), utf8)
 
 -- | Compare @actual@ against the golden file at @path@. Prints a
 -- useful diff summary on mismatch.
 goldenText :: FilePath -> String -> IO ()
 goldenText path actual = do
-  expected <- readFile path
+  expected <- withFile path ReadMode $ \h -> do
+    hSetEncoding h utf8
+    s <- hGetContents h
+    length s `seq` pure s  -- force the read before the handle closes
   let a = normalize actual
       e = normalize expected
   if a == e
