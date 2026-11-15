@@ -25,9 +25,6 @@ import Sphinx.Sudoku.Types
 easyPuzzle :: String
 easyPuzzle = "530070000600195000098000060800060003400803001700020006060000280000419005000080079"
 
-hardPuzzle :: String
-hardPuzzle = "800000000003600000075090000060005000000000000000400082000007980002400017001000000000040"  -- Arto Inkala
-
 main :: IO ()
 main = hspec $ do
   parseSpec
@@ -79,13 +76,13 @@ sudokuSolveSpec = describe "Sudoku solving" $ do
         let solved = headOrFail (solveUpTo 1 g)
         renderGrid solved `shouldBe` expectedEasyGrid
 
-  it "solves a known-hard puzzle" $
-    case SP.parseSudoku hardPuzzle of
-      Left e -> expectationFailure (show e)
-      Right g -> do
-        let solved = headOrFail (solveUpTo 1 g)
-        isSolved solved `shouldBe` True
-        respectsGivens g solved `shouldBe` True
+  it "solves a generated hard puzzle" $ do
+    let puzzle = Gen.generateSudoku Gen.Hard 1234
+    case solveUpTo 1 puzzle of
+      (sol : _) -> do
+        isSolved sol `shouldBe` True
+        respectsGivens puzzle sol `shouldBe` True
+      [] -> expectationFailure "no solution found"
 
   it "detects that a nearly empty board has multiple solutions" $
     case SP.parseSudoku (replicate 81 '.') of

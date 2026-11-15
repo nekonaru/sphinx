@@ -26,7 +26,7 @@ module Sphinx.Nonogram.Parse
   ) where
 
 import Data.Char (isSpace)
-import Data.List (foldl')
+import qualified Data.List as L
 
 import Sphinx.Error (SphinxError(..))
 import Sphinx.Nonogram.Types (Nonogram(..), clueLineLength)
@@ -81,7 +81,7 @@ parseClueLine line
           Left (NonogramFormat ("invalid clue " ++ show w ++ "; write 0 alone for an empty line"))
       | length w > 6 =
           Left (NonogramFormat ("invalid clue " ++ show w ++ "; clues longer than 999999 are not supported"))
-      | otherwise = Right (foldl' (\acc ch -> acc * 10 + fromEnum ch - fromEnum '0') 0 w)
+      | otherwise = Right (L.foldl' (\acc ch -> acc * 10 + fromEnum ch - fromEnum '0') 0 w)
     isAsciiDigit ch = ch >= '0' && ch <= '9'
 
 -- A clue list must fit the line it belongs to.
