@@ -7,10 +7,10 @@ import Sphinx.Class (Puzzle(..))
 import qualified Sphinx.Nonogram.Render as NRender
 import Sphinx.Nonogram.Parse (parseNonogram)
 import Sphinx.Nonogram.Solve (solveUpTo)
-import Sphinx.Nonogram.Types (Nonogram, Solution)
+import qualified Sphinx.Nonogram.Types as NT
 
-instance Puzzle Nonogram where
-  type Solution Nonogram = Solution
+instance Puzzle NT.Nonogram where
+  type Solution NT.Nonogram = NT.Solution
   parsePuzzle = parseNonogram
   solveLimit = solveUpTo
   renderSolution puzzle sol = NRender.renderSolution puzzle sol
