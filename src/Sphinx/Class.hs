@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 -- | The puzzle typeclass every Sphinx puzzle implements.
 --
 -- A puzzle is a parsed, validated value. Solving it is pure: the

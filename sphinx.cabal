@@ -37,11 +37,13 @@ library
         Sphinx.Sudoku.Solve
         Sphinx.Sudoku.Render
         Sphinx.Sudoku.Generate
+        Sphinx.Sudoku.Puzzle
         Sphinx.Nonogram.Types
         Sphinx.Nonogram.Parse
         Sphinx.Nonogram.Line
         Sphinx.Nonogram.Solve
         Sphinx.Nonogram.Render
+        Sphinx.Nonogram.Puzzle
     build-depends:
         base >=4.17 && <5,
         containers >=0.6 && <0.8,

@@ -25,7 +25,7 @@ module Sphinx.Nonogram.Parse
   ( parseNonogram
   ) where
 
-import Data.Char (isDigit, isSpace)
+import Data.Char (isSpace)
 
 import Sphinx.Error (SphinxError(..))
 import Sphinx.Nonogram.Types (Nonogram(..), clueLineLength)
@@ -33,6 +33,8 @@ import Sphinx.Nonogram.Types (Nonogram(..), clueLineLength)
 -- | Parse and validate a nonogram puzzle.
 parseNonogram :: String -> Either SphinxError Nonogram
 parseNonogram input
+  | length separatorLines > 1 =
+      Left (NonogramFormat "found more than one '---' separator line; exactly one is required")
   | null sectionRows || null sectionCols =
       Left (NonogramFormat "both a row clue section and a column clue section are required (separated by '---')")
   | otherwise = do
@@ -45,6 +47,7 @@ parseNonogram input
       pure (Nonogram rowClues' colClues')
   where
     (sectionRows, sectionCols) = splitOnSeparator (cleanLines input)
+    separatorLines = filter (== "---") (cleanLines input)
 
     cleanLines = filter (not . null) . map trim . lines . map crToLf
     crToLf ch | ch == '\r' = '\n' | otherwise = ch
@@ -56,8 +59,9 @@ parseNonogram input
            (_sep : cs) -> (rs, cs)
            [] -> (rs, [])
 
--- A clue line is either exactly "0" (empty line) or a list of
--- positive integers separated by spaces.
+-- A clue line is either exactly "0" (empty line) or a list of ASCII
+-- digits, each at most six digits long (clues larger than 999999 cells
+-- are rejected as absurd).
 parseClueLine :: String -> Either SphinxError [Int]
 parseClueLine line
   | line == "0" = Right []
@@ -68,11 +72,16 @@ parseClueLine line
         else mapM parseClueWord ws
   where
     parseClueWord w
-      | null w || not (all isDigit w) =
-          Left (NonogramFormat ("invalid clue " ++ show w ++ "; clues must be non negative integers"))
-      | head w == '0' =
+      | null w || not (all isAsciiDigit w) =
+          Left (NonogramFormat ("invalid clue " ++ show w ++ "; clues must be non negative ASCII digits"))
+      | case w of
+          ('0' : _) -> True
+          _ -> False =
           Left (NonogramFormat ("invalid clue " ++ show w ++ "; write 0 alone for an empty line"))
-      | otherwise = Right (read w)  -- safe: non empty, all digits, no leading zero
+      | length w > 6 =
+          Left (NonogramFormat ("invalid clue " ++ show w ++ "; clues longer than 999999 are not supported"))
+      | otherwise = Right (foldl' (\acc ch -> acc * 10 + fromEnum ch - fromEnum '0') 0 w)
+    isAsciiDigit ch = ch >= '0' && ch <= '9'
 
 -- A clue list must fit the line it belongs to.
 checkFits :: Int -> (Int, [Int]) -> Either SphinxError ()

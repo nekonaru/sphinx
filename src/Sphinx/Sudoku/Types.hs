@@ -53,27 +53,28 @@ colIndex i = i `mod` 9
 boxIndex :: Int -> Int
 boxIndex i = (rowIndex i `div` 3) * 3 + colIndex i `div` 3
 
--- | Human readable names for the 27 units, used in error messages.
+-- | Human readable unit names (Bahasa Indonesia), used in error
+-- messages and step reports. Rows first, then columns, then boxes.
 unitNames :: Vector String
 unitNames = V.fromList $
-  [ "row " ++ show (r + 1) | r <- [0 .. 8] ] ++
-  [ "column " ++ show (c + 1) | c <- [0 .. 8] ] ++
-  [ "box " ++ show (b + 1) | b <- [0 .. 8] ]
+  [ "baris " ++ show (r + 1) | r <- [0 .. 8 :: Int] ] ++
+  [ "kolom " ++ show (c + 1) | c <- [0 .. 8 :: Int] ] ++
+  [ "kotak " ++ show (b + 1) | b <- [0 .. 8 :: Int] ]
 
 -- | All 27 units as lists of cell positions. Rows first, then
 -- columns, then boxes. Aligns with 'unitNames'.
 units :: Vector [Int]
 units = V.fromList $
-  [ [ r * 9 + c | c <- [0 .. 8] ] | r <- [0 .. 8] ] ++
-  [ [ r * 9 + c | r <- [0 .. 8] ] | c <- [0 .. 8] ] ++
-  [ [ (br * 3 + dr) * 9 + bc * 3 + dc | dr <- [0 .. 2], dc <- [0 .. 2] ]
-  | br <- [0 .. 2], bc <- [0 .. 2] ]
+  [ [ r * 9 + c | c <- [0 .. 8 :: Int] ] | r <- [0 .. 8 :: Int] ] ++
+  [ [ r * 9 + c | r <- [0 .. 8 :: Int] ] | c <- [0 .. 8 :: Int] ] ++
+  [ [ (br * 3 + dr) * 9 + bc * 3 + dc | dr <- [0 .. 2 :: Int], dc <- [0 .. 2 :: Int] ]
+  | br <- [0 .. 2 :: Int], bc <- [0 .. 2 :: Int] ]
 
 -- | Peer positions for every cell: the other 20 cells in the same
 -- row, column, or box, sorted and deduplicated.
 peers :: Vector [Int]
 peers = V.fromList
-  [ sort (nub [ j | u <- V.toList units, i `elem` u, j <- u, j /= i ]) | i <- [0 .. 80] ]
+  [ sort (nub [ j | u <- V.toList units, i `elem` u, j <- u, j /= i ]) | i <- [0 .. 80 :: Int] ]
 
 -- | True when every cell is filled and every unit holds 1-9.
 isSolved :: Grid -> Bool

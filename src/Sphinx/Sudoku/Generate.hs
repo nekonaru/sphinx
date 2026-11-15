@@ -58,54 +58,71 @@ givenTarget d = case d of
 splitmix64 :: Word64 -> [Word64]
 splitmix64 seed = go seed
   where
-    go s = let s' = s + 0x9e3779b97f4a7c15
-               z = s'
-               z1 = (z `xor` (z `shiftR` 30)) * 0xbf58476d1ce4e5b9
-               z2 = (z1 `xor` (z1 `shiftR` 27)) * 0x94d049bb133111eb
-               z3 = z2 `xor` (z2 `shiftR` 31)
-           in z3 : go s'
+    go s =
+      let s' = s + 0x9e3779b97f4a7c15
+          z1 = (s' `xor` (s' `shiftR` 30)) * 0xbf58476d1ce4e5b9
+          z2 = (z1 `xor` (z1 `shiftR` 27)) * 0x94d049bb133111eb
+          z3 = z2 `xor` (z2 `shiftR` 31)
+      in z3 : go s'
 
--- Deterministic Fisher-Yates shuffle driven by an infinite PRNG stream.
-shuffleWith :: [Word64] -> [a] -> [a]
-shuffleWith rng xs = go rng (V.fromList xs)
+-- Deterministic Fisher-Yates shuffle driven by the PRNG stream.
+-- Returns the shuffled list and the unconsumed remainder of the stream.
+shuffleWith :: [Word64] -> [a] -> ([a], [Word64])
+shuffleWith stream xs = go stream (V.fromList xs) []
   where
-    go _ v | V.null v = []
-    go (r:rs) v =
+    go s v acc
+      | V.null v = (reverse acc, s)
+    go (r : rs) v acc =
       let n = V.length v
           i = fromIntegral (r `mod` fromIntegral n)
           x = v V.! i
           v' = v V.// [(i, v V.! (n - 1)), (n - 1, v V.! i)]
-      in x : go rs (V.slice 0 (n - 1) v')
-    go [] v = V.toList v
+      in go rs (V.slice 0 (n - 1) v') (x : acc)
+    go [] v acc = (reverse acc ++ V.toList v, [])  -- stream shorter than v; not expected
 
 -- | A deterministic backtracking fill that respects the PRNG stream.
+-- Digits are only placed where they cannot conflict with the peers
+-- already assigned, which prunes the search hard.
 fillGrid :: [Word64] -> Grid
-fillGrid rng = case solveOrdered rng emptyGrid of
+fillGrid rng = case go rng emptyGrid of
   Just g -> g
-  Nothing -> emptyGrid  -- unreachable for an empty grid
+  Nothing -> emptyGrid  -- unreachable from the empty grid
   where
-    solveOrdered _ g | isSolved g = Just g
-    solveOrdered r g =
-      case firstEmpty g of
-        Nothing -> Just g
-        Just i ->
-          let digits = shuffleWith r [1 .. 9]
-          in firstJust [ solveOrdered r' (setCell i d g)
-                       | (d, r') <- zip digits (drop 9 r) ]
-    firstEmpty g = go' 0
+    go :: [Word64] -> Grid -> Maybe Grid
+    go r g
+      | isSolved g = Just g
+      | otherwise =
+          case firstEmpty g of
+            Nothing -> Nothing  -- full but invalid: dead end
+            Just i ->
+              let (digits, after) = shuffleWith r [1 .. 9]
+              in tryAll g i after (zip [0 ..] digits)
+
+    tryAll :: Grid -> Int -> [Word64] -> [(Int, Int)] -> Maybe Grid
+    tryAll _ _ _ [] = Nothing
+    tryAll g i after ((k, d) : rest)
+      | not (validPlacement g i d) = tryAll g i after rest
+      | otherwise = case go (drop k after) (setCell i d g) of
+          Just g' -> Just g'
+          Nothing -> tryAll g i after rest
+
+    firstEmpty g = goEmpty 0
       where
-        go' i
+        goEmpty i
           | i >= 81 = Nothing
           | getCell g i == 0 = Just i
-          | otherwise = go' (i + 1)
-    firstJust = foldr (\m rest -> case m of Just x -> Just x; Nothing -> rest) Nothing
+          | otherwise = goEmpty (i + 1)
+
+-- Peers of cell i must not already hold digit d.
+validPlacement :: Grid -> Int -> Int -> Bool
+validPlacement g i d = all (\j -> getCell g j /= d) (peers V.! i)
 
 -- | Generate a puzzle with a unique solution.
 generateSudoku :: Difficulty -> Word64 -> Grid
-generateSudoku difficulty seed = dig (shuffleWith rng [ 0 .. 80 ]) full
+generateSudoku difficulty seed = dig cellOrder full
   where
     full = fillGrid (splitmix64 seed)
-    rng = splitmix64 (seed + 1)
+    cellOrder = fst (shuffleWith (splitmix64 (seed + 1)) [0 .. 80])
 
     dig [] g = g
     dig (i : is) g

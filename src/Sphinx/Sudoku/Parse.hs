@@ -11,7 +11,7 @@ module Sphinx.Sudoku.Parse
   ( parseSudoku
   ) where
 
-import Data.Char (isSpace, isDigit)
+import Data.Char (isSpace)
 import qualified Data.Vector as V
 
 import Sphinx.Error (SphinxError(..))
@@ -54,7 +54,7 @@ mapDigits chars = go 0 chars
       Nothing -> Left (SudokuInvalidChar i c)
     digitOf c
       | c == '.' || c == '0' = Just 0
-      | isDigit c = Just (fromEnum c - fromEnum '0')
+      | c >= '1' && c <= '9' = Just (fromEnum c - fromEnum '0')
       | otherwise = Nothing
 
 -- | Detect duplicate non zero digits inside any row, column, or box.

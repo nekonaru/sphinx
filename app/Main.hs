@@ -9,7 +9,7 @@ import Control.Monad (when)
 import Data.Word (Word64)
 import Options.Applicative
 import System.Exit (exitFailure)
-import System.IO (hPutStrLn, stderr, withFile, IOMode(ReadMode), hFileSize)
+import System.IO (hPutStrLn, stderr, withFile, IOMode(ReadMode), hGetContents)
 
 import Sphinx.Class (Puzzle(..))
 import Sphinx.Error (renderError)
@@ -32,6 +32,7 @@ data SudokuOpts = SudokuOpts
 data NonogramOpts = NonogramOpts
   { nonogramFile :: FilePath
   , nonogramSteps :: Bool
+  , nonogramCount :: Int
   }
 
 data Command
@@ -54,6 +55,9 @@ nonogramOpts :: Parser NonogramOpts
 nonogramOpts = NonogramOpts
   <$> argument str (metavar "FILE" <> help "puzzle file, or '-' for stdin")
   <*> switch (long "steps" <> help "print search statistics")
+  <*> option auto
+        (long "count" <> metavar "N" <> value 1
+        <> help "count up to N solutions (default 1); use 2 to check uniqueness")
 
 commandParser :: Parser Command
 commandParser = subparser
@@ -81,23 +85,31 @@ main = do
 die :: String -> IO a
 die msg = hPutStrLn stderr ("sphinx: " ++ msg) >> exitFailure
 
--- | Refuse to read puzzle files larger than 1 MiB. Puzzles are tiny;
--- anything bigger is almost certainly a mistake.
-maxPuzzleBytes :: Integer
+-- | Refuse to read puzzle input larger than 1 MiB. Puzzles are tiny;
+-- anything bigger is almost certainly a mistake. Stdin is read
+-- strictly with the same limit.
+maxPuzzleBytes :: Int
 maxPuzzleBytes = 1024 * 1024
 
 readInput :: FilePath -> IO String
-readInput "-" = getContents
-readInput path = do
-  size <- withFile path ReadMode hFileSize
-  when (size > maxPuzzleBytes) $
-    die ("puzzle file is too large (" ++ show size ++ " bytes); the limit is "
-      ++ show maxPuzzleBytes ++ " bytes")
-  readFile path
+readInput "-" = do
+  s <- getContents
+  let n = length s
+  if n > maxPuzzleBytes
+    then die ("standard input is too large (" ++ show n ++ " bytes); the limit is " ++ show maxPuzzleBytes ++ " bytes")
+    else pure s
+readInput path =
+  withFile path ReadMode $ \h -> do
+    s <- hGetContents h
+    let n = length s
+    if n > maxPuzzleBytes
+      then die ("puzzle file is too large (" ++ show n ++ " bytes); the limit is " ++ show maxPuzzleBytes ++ " bytes")
+      else pure s
 
 runSudoku :: SudokuOpts -> IO ()
 runSudoku o
   | Just difficultyText <- sudokuGenerate o = generateCmd o difficultyText
+  | sudokuCount o < 1 = die "--count must be at least 1"
   | otherwise = do
       file <- maybe (die "no puzzle file given (pass FILE, or use --generate DIFFICULTY)") pure (sudokuFile o)
       content <- readInput file
@@ -108,7 +120,7 @@ runSudoku o
             case Sudoku.solveWithSteps grid of
               Nothing -> die "no solution exists for this puzzle"
               Just (_, steps) -> putStrLn (renderSteps steps)
-          let limit = max 1 (sudokuCount o)
+          let limit = sudokuCount o
               solutions = Sudoku.solveUpTo limit grid
           case solutions of
             [] -> die "no solution exists for this puzzle"
@@ -117,15 +129,18 @@ runSudoku o
             putStrLn (countLine (length solutions) limit)
 
 generateCmd :: SudokuOpts -> String -> IO ()
-generateCmd o difficultyText =
-  case Gen.parseDifficulty difficultyText of
-    Nothing ->
-      die ("unknown difficulty '" ++ difficultyText ++ "'; expected easy, medium or hard")
-    Just difficulty -> do
-      let seed = maybe 0x5deece66d id (sudokuSeed o)
-          puzzle = Gen.generateSudoku difficulty seed
-      putStrLn ("# difficulty: " ++ Gen.difficultyName difficulty ++ ", seed: " ++ show seed)
-      putStrLn (renderGrid puzzle)
+generateCmd o difficultyText
+  | sudokuCount o /= 1 = die "--count cannot be combined with --generate"
+  | sudokuSteps o = die "--steps cannot be combined with --generate"
+  | otherwise =
+      case Gen.parseDifficulty difficultyText of
+        Nothing ->
+          die ("unknown difficulty '" ++ difficultyText ++ "'; expected easy, medium or hard")
+        Just difficulty -> do
+          let seed = maybe 0x5deece66d id (sudokuSeed o)
+              puzzle = Gen.generateSudoku difficulty seed
+          putStrLn ("# difficulty: " ++ Gen.difficultyName difficulty ++ ", seed: " ++ show seed)
+          putStrLn (renderGrid puzzle)
 
 countLine :: Int -> Int -> String
 countLine found cap
@@ -133,15 +148,20 @@ countLine found cap
   | otherwise = show found ++ " solution(s)"
 
 runNonogram :: NonogramOpts -> IO ()
-runNonogram o = do
-  content <- readInput (nonogramFile o)
-  case parsePuzzle content of
-    Left err -> die (renderError err)
-    Right puzzle ->
-      case Nonogram.solveWithStats puzzle of
-        Nothing -> die "no solution exists for this puzzle"
-        Just (solution, stats) -> do
-          putStrLn (NRender.renderSolution puzzle solution)
-          when (nonogramSteps o) $
-            putStrLn ("search: " ++ show (Nonogram.guesses stats) ++ " guess(es), "
-              ++ show (Nonogram.deadEnds stats) ++ " dead end(s) pruned")
+runNonogram o
+  | nonogramCount o < 1 = die "--count must be at least 1"
+  | otherwise = do
+      content <- readInput (nonogramFile o)
+      case parsePuzzle content of
+        Left err -> die (renderError err)
+        Right puzzle -> do
+          case Nonogram.solveWithStats puzzle of
+            Nothing -> die "no solution exists for this puzzle"
+            Just (solution, stats) -> do
+              putStrLn (NRender.renderSolution puzzle solution)
+              when (nonogramSteps o) $
+                putStrLn ("pencarian: " ++ show (Nonogram.guesses stats) ++ " tebakan, "
+                  ++ show (Nonogram.deadEnds stats) ++ " cabang gagal dipangkas")
+          when (nonogramCount o > 1) $ do
+            let solutions = Nonogram.solveUpTo (nonogramCount o) puzzle
+            putStrLn (countLine (length solutions) (nonogramCount o))

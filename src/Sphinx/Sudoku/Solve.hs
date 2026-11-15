@@ -18,9 +18,6 @@ import Data.List (minimumBy)
 import Data.Ord (comparing)
 import qualified Data.Vector as V
 
-import Sphinx.Class (Puzzle(..))
-import Sphinx.Sudoku.Parse (parseSudoku)
-import Sphinx.Sudoku.Render (renderGrid)
 import Sphinx.Sudoku.Types
 
 -- | A single deduction made by the solver, used by the @--steps@ mode.
@@ -43,18 +40,18 @@ data Step
       }
   deriving (Eq, Show)
 
--- | Render a step as one human readable sentence (English).
+-- | Render a step as one human readable sentence (Bahasa Indonesia).
 renderStep :: Int -> Step -> String
 renderStep n st = case st of
   NakedSingle i d ->
     show n ++ ". R" ++ show (rowIndex i + 1) ++ "C" ++ show (colIndex i + 1)
-      ++ " = " ++ show d ++ " (naked single: only candidate left)"
+      ++ " = " ++ show d ++ " (naked single: satu-satunya kandidat yang tersisa)"
   HiddenSingle i d unit ->
     show n ++ ". R" ++ show (rowIndex i + 1) ++ "C" ++ show (colIndex i + 1)
-      ++ " = " ++ show d ++ " (hidden single: only spot for " ++ show d ++ " in " ++ unit ++ ")"
+      ++ " = " ++ show d ++ " (hidden single: satu-satunya tempat untuk " ++ show d ++ " di " ++ unit ++ ")"
   Guess i d ->
-    show n ++ ". Guess R" ++ show (rowIndex i + 1) ++ "C" ++ show (colIndex i + 1)
-      ++ " = " ++ show d ++ " (backtracking search)"
+    show n ++ ". Coba R" ++ show (rowIndex i + 1) ++ "C" ++ show (colIndex i + 1)
+      ++ " = " ++ show d ++ " (tebakan, pencarian backtracking)"
 
 -- | Bit mask of the candidate digits for a cell. Bit (d-1) is set
 -- when digit d is still possible. Occupied cells have mask 0.
@@ -162,10 +159,3 @@ solveWithSteps g = case search g of
   [] -> Nothing
 
 
--- | Uniform 'Puzzle' interface for sudoku grids.
-instance Puzzle Grid where
-  type Solution Grid = Grid
-  parsePuzzle = parseSudoku
-  solveLimit = solveUpTo
-  renderSolution _ = renderGrid
-  renderPuzzle = renderGrid

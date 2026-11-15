@@ -2,6 +2,7 @@
 -- tests for solver guarantees, and golden tests for the renderers.
 module Main (main) where
 
+import Data.Word (Word64)
 import Test.QuickCheck
 import Test.Hspec
 
@@ -17,7 +18,7 @@ import Sphinx.Nonogram.Types
 import qualified Sphinx.Sudoku.Generate as Gen
 import qualified Sphinx.Sudoku.Parse as SP
 import Sphinx.Sudoku.Render (renderGrid)
-import Sphinx.Sudoku.Solve (solveUpTo, solveWithSteps)
+import Sphinx.Sudoku.Solve (Step(..), solveUpTo, solveWithSteps)
 import Sphinx.Sudoku.Types
 
 -- The classic Wikipedia example puzzle and its known solution.
@@ -56,10 +57,13 @@ parseSpec = describe "Sudoku parsing" $ do
       `shouldBe` Left (SudokuInvalidChar 40 'x')
 
   it "rejects duplicate givens in a row" $
-    SP.parseSudoku ("11" ++ replicate 79 '.') `shouldBe` Left (SudokuConflict "row 1 (digit 1)")
+    SP.parseSudoku ("11" ++ replicate 79 '.') `shouldBe` Left (SudokuConflict "baris 1 (digit 1)")
 
   it "rejects duplicate givens in a box" $
-    SP.parseSudoku ("1........" ++ ".......1." ++ replicate 63 '.') `shouldBe` Left (SudokuConflict "box 1 (digit 1)")
+    SP.parseSudoku ("1........" ++ ".......1." ++ replicate 63 '.') `shouldBe` Left (SudokuConflict "kotak 1 (digit 1)")
+
+  it "rejects non-ASCII Unicode digits" $
+    SP.parseSudoku ("7" ++ "٣" ++ replicate 79 '.') `shouldBe` Left (SudokuInvalidChar 1 '٣')
 
   it "parses the 9-line format" $
     SP.parseSudoku (unlines ["53..7....","6..195...",".98....6.","8...6...3","4..8.3..1","7...2...6",".6....28.","...419..5","....8..79"])
@@ -88,13 +92,15 @@ sudokuSolveSpec = describe "Sudoku solving" $ do
       Right g -> length (solveUpTo 2 g) `shouldBe` 2
 
   it "reports no solution when the puzzle is unsatisfiable" $ do
-    -- 79 givens of a solved grid, one altered so no solution exists.
-    let unsat = "974215863356894729281637534839541672687932415745168392162759948523983617794398427175641372986"
+    -- Mutated from the classic easy puzzle: one given (position 1)
+    -- changed to a digit that does not clash in its row, column or
+    -- box, yet makes the puzzle unsatisfiable. Verified by the solver.
+    let unsat = "130070000600195000098000060800060003400803001700020006060000280000419005000080079"
     case SP.parseSudoku unsat of
-      Left _ -> pure ()  -- rejected at parse time also acceptable
+      Left _ -> expectationFailure "candidate unsatisfiable puzzle was rejected at parse time"
       Right g -> solveUpTo 1 g `shouldBe` []
 
-  it "solveWithSteps produces steps that fill every cell" $
+  it "steps fill only empty cells, always with the solution's digits" $
     case SP.parseSudoku easyPuzzle of
       Left e -> expectationFailure (show e)
       Right g -> case solveWithSteps g of
@@ -102,12 +108,14 @@ sudokuSolveSpec = describe "Sudoku solving" $ do
         Just (sol, steps) -> do
           isSolved sol `shouldBe` True
           length steps `shouldSatisfy` (> 0)
+          all (digitMatches sol) steps `shouldBe` True
+          all (wasEmpty g) steps `shouldBe` True
 
 sudokuPropertySpec :: Spec
 sudokuPropertySpec = describe "Sudoku solver properties" $
   it "generated puzzles always solve to a grid respecting the givens" $
-    withMaxSuccess 4 $ property $ \seed ->
-      let grid = Gen.generateSudoku Gen.Easy (fromIntegral (abs seed :: Int))
+    withMaxSuccess 4 $ property $ \(seed :: Word64) ->
+      let grid = Gen.generateSudoku Gen.Easy seed
       in case solveUpTo 1 grid of
            (sol : _) -> isSolved sol && respectsGivens grid sol
            [] -> False
@@ -127,6 +135,21 @@ generateSpec = describe "Sudoku generation" $ do
 
 nonogramSpec :: Spec
 nonogramSpec = describe "Nonogram" $ do
+  it "rejects clues whose block cannot fit the line" $
+    case parseNonogram (unlines ["3", "---", "2"]) of
+      Left _ -> True `shouldBe` True  -- row clue needs 3 of 1 column: rejected
+      Right _ -> expectationFailure "expected a parse failure"
+
+  it "rejects absurd clue tokens without crashing" $
+    case parseNonogram (unlines ["99999999", "---", "1"]) of
+      Left _ -> True `shouldBe` True
+      Right _ -> expectationFailure "expected a parse failure"
+
+  it "rejects multiple '---' separators" $
+    case parseNonogram (unlines ["1", "---", "1", "---", "1"]) of
+      Left _ -> True `shouldBe` True
+      Right _ -> expectationFailure "expected a parse failure"
+
   it "enumerates 3 arrangements for a single block of 1 in length 3" $
     NLine.arrangements 3 [1] `shouldBe`
       [ [True, False, False], [False, True, False], [False, False, True] ]
@@ -137,9 +160,11 @@ nonogramSpec = describe "Nonogram" $ do
   it "enumerates the empty filling for empty clues" $
     NLine.arrangements 4 [] `shouldBe` [ [False, False, False, False] ]
 
-  it "enumerates the two fillings for 2+2 in length 5" $
-    NLine.arrangements 5 [2, 2] `shouldBe`
-      [ [True, True, False, True, True] ]
+  it "enumerates exactly the two fillings for 2+2 in length 6" $
+    NLine.arrangements 6 [2, 2] `shouldBe`
+      [ [True, True, False, True, True, False]
+      , [False, True, True, False, True, True]
+      ]
 
   it "parses the PRD example format" $ do
     let input = unlines ["2 2", "7", "7", "5", "3", "1", "---", "2", "4", "5", "5", "5", "4", "2"]
@@ -217,6 +242,18 @@ expectedEasyGrid = unlines
   , "| 3 4 5 | 2 8 6 | 1 7 9 |"
   , "+-------+-------+-------+"
   ]
+
+digitMatches :: Grid -> Step -> Bool
+digitMatches sol st = case st of
+  NakedSingle i d -> getCell sol i == d
+  HiddenSingle i d _ -> getCell sol i == d
+  Guess i d -> getCell sol i == d
+
+wasEmpty :: Grid -> Step -> Bool
+wasEmpty g st = case st of
+  NakedSingle i _ -> getCell g i == 0
+  HiddenSingle i _ _ -> getCell g i == 0
+  Guess i _ -> getCell g i == 0
 
 respectsGivens :: Grid -> Grid -> Bool
 respectsGivens givens solved =

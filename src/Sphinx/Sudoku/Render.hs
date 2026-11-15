@@ -22,10 +22,10 @@ renderGrid g = intercalate "\n" (concat [border, rowLines 0, border, rowLines 3,
       | r <- [start, start + 1, start + 2] ]
     colLine r c = " " ++ cell (r * 9 + c) ++ " " ++ cell (r * 9 + c + 1) ++ " " ++ cell (r * 9 + c + 2) ++ " "
 
--- | Render the numbered steps collected by @--steps@.
+-- | Render the numbered steps collected by @--steps@ (Bahasa Indonesia).
 renderSteps :: [Step] -> String
 renderSteps steps =
   intercalate "\n" $
-    [ "Solving steps:" ] ++
+    [ "Langkah-langkah penyelesaian:" ] ++
     [ renderStep (i + 1) st | (i, st) <- zip [0 ..] steps ] ++
-    [ "Done. " ++ show (length steps) ++ " step(s)." ]
+    [ "Selesai. " ++ show (length steps) ++ " langkah." ]

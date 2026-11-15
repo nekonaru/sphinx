@@ -17,10 +17,7 @@ import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import qualified Data.Vector as V
 
-import Sphinx.Class (Puzzle(..))
 import Sphinx.Nonogram.Line (lineOptions)
-import Sphinx.Nonogram.Parse (parseNonogram)
-import qualified Sphinx.Nonogram.Render as NRender
 import Sphinx.Nonogram.Types
 
 -- | Statistics about one solve, reported by @--steps@.
@@ -101,10 +98,7 @@ propagateLines _ lineLen clues g0 = foldl' step (g0, False, False) (zip [0 ..] c
           in case options of
                [] -> (gg, ch, True)
                _ ->
-                 let merged = V.fromList
-                       [ mergeCell known cellValues
-                       | (known, cellValues) <- zip known (transpose options)
-                       ]
+                 let merged = V.fromList (mergeKnown known options)
                      changedNow = or
                        [ changedCell a b
                        | (a, b) <- zip known (V.toList merged)
@@ -130,13 +124,25 @@ setCol :: MGrid -> Int -> [Bool] -> MGrid
 setCol g c opt =
   V.fromList [ row V.// [(c, Just v)] | (row, v) <- zip (V.toList g) opt ]
 
-mergeCell :: Maybe Bool -> [Bool] -> Maybe Bool
-mergeCell known cellValues = case known of
-  Just v -> Just v
-  Nothing
-    | all id cellValues -> Just True
-    | not (any id cellValues) -> Just False
-    | otherwise -> Nothing
+-- Fuse options into the known cells in a single pass. Stops early as
+-- soon as every cell has been seen filled and empty; remaining
+-- options are irrelevant then. A cell stays unknown when the options
+-- disagree on it.
+mergeKnown :: [Maybe Bool] -> [[Bool]] -> [Maybe Bool]
+mergeKnown knowns = go initialized
+  where
+    initialized = map (\k -> (k, True, True)) knowns
+    apply (k, t, f) v = (k, t && v, f && not v)
+    isDecided (_, t, f) = not t && not f
+    go states [] = map project states
+    go states (option : rest)
+      | all isDecided states = map project states
+      | otherwise = go (zipWith apply states option) rest
+    project (known, _, _) | Just v <- known = Just v
+    project (_, t, f)
+      | t && not f = Just True
+      | f && not t = Just False
+      | otherwise = Nothing
 
 changedCell :: Maybe Bool -> Maybe Bool -> Bool
 changedCell Nothing (Just _) = True
@@ -168,11 +174,3 @@ bestLine puzzle g =
        _ -> Just (minimumBy (comparing (\(_, _, o) -> length o)) candidates)
   where
     hasUnknown = V.any (== Nothing)
-
--- | Uniform 'Puzzle' interface for nonograms.
-instance Puzzle Nonogram where
-  type Solution Nonogram = Solution
-  parsePuzzle = parseNonogram
-  solveLimit = solveUpTo
-  renderSolution puzzle sol = NRender.renderSolution puzzle sol
-  renderPuzzle = NRender.renderPuzzle
