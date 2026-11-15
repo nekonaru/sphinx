@@ -373,10 +373,10 @@ logicSpec = describe "Logic (zebra) puzzles" $ do
 -- Replace the first occurrence of @old@ with @new@.
 replaceLine :: String -> String -> String -> String
 replaceLine old new input =
-  let (before, rest) = break (== old) (lines input)
-  in case rest of
+  let (headLines, tailLines) = break (== old) (lines input)
+  in case tailLines of
        [] -> input
-       (_ : after) -> unlines (before ++ [new] ++ after)
+       (_ : after) -> unlines (headLines ++ [new] ++ after)
 
 -- Replace each LF with CRLF.
 crlf :: Char -> String
