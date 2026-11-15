@@ -1,0 +1,84 @@
+cabal-version:      2.4
+name:               sphinx
+version:            0.1.0
+synopsis:           Puzzle solver for sudoku, nonogram and logic puzzles
+description:
+    Sphinx solves constraint-based puzzles. It ships a typed, purely
+    functional core library, a CLI with an optional step-by-step
+    explanation mode, and a property-tested solver for sudoku and
+    nonogram puzzles.
+homepage:           https://github.com/nekonaru/sphinx
+bug-reports:        https://github.com/nekonaru/sphinx/issues
+license:            MIT
+license-file:       LICENSE
+author:             nekonaru
+maintainer:         nekonaru
+copyright:          2026 nekonaru
+category:           Algorithms
+tested-with:        GHC ==9.6.6 || ==9.8.4 || ==9.10.1
+build-type:         Simple
+
+source-repository head
+    type:     git
+    location: https://github.com/nekonaru/sphinx.git
+
+common warnings
+    ghc-options:      -Wall -Wcompat -Wpedantic
+    default-language: Haskell2010
+
+library
+    import:           warnings
+    hs-source-dirs:   src
+    exposed-modules:
+        Sphinx.Class
+        Sphinx.Error
+        Sphinx.Sudoku.Types
+        Sphinx.Sudoku.Parse
+        Sphinx.Sudoku.Solve
+        Sphinx.Sudoku.Render
+        Sphinx.Sudoku.Generate
+        Sphinx.Nonogram.Types
+        Sphinx.Nonogram.Parse
+        Sphinx.Nonogram.Line
+        Sphinx.Nonogram.Solve
+        Sphinx.Nonogram.Render
+    build-depends:
+        base >=4.17 && <5,
+        containers >=0.6 && <0.8,
+        vector >=0.13 && <0.14
+
+    if flag(dev)
+        ghc-options: -O0
+    else
+        ghc-options: -O2
+
+flag dev
+    description: Build with -O0 for faster local iteration
+    default:     False
+    manual:      True
+
+executable sphinx
+    import:           warnings
+    hs-source-dirs:   app
+    main-is:          Main.hs
+    ghc-options:      -O2
+    build-depends:
+        base >=4.17 && <5,
+        sphinx,
+        optparse-applicative >=0.18 && <0.20
+
+test-suite sphinx-test
+    import:           warnings
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Spec.hs
+    other-modules:
+        Golden
+    ghc-options:      -O1
+    build-depends:
+        base >=4.17 && <5,
+        sphinx,
+        containers >=0.6 && <0.8,
+        vector >=0.13 && <0.14,
+        hspec >=2.10 && <2.13,
+        QuickCheck >=2.14 && <2.17

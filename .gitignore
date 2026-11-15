@@ -1,0 +1,19 @@
+# Build artifacts
+dist-newstyle/
+.stack-work/
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
+.ghc.environment.*
+
+# Tooling caches
+.hspec-failures
+
+# Local cabal overrides
+cabal.project.local
+cabal.project.local~
+
+# OS noise
+.DS_Store
+Thumbs.db
