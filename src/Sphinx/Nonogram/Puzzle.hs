@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 -- | Uniform 'Puzzle' interface for nonograms.
 module Sphinx.Nonogram.Puzzle
   (

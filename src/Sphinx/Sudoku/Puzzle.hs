@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 -- | Uniform 'Puzzle' interface for sudoku grids.
 module Sphinx.Sudoku.Puzzle
   (
