@@ -62,6 +62,26 @@ already known to be empty, the first filling is eliminated; if the
 last column is known empty, only `##.#..` survives, and the row
 collapses completely.
 
+## Logic (zebra) puzzles
+
+**Backtracking over category permutations with clue pruning.**
+
+A logic puzzle has a fixed house count and named categories of values.
+Each category is assigned a permutation of the house positions. The
+solver assigns categories one at a time, ordered by how many clues
+touch each category (most constrained first), and prunes any branch
+that violates a fully assigned clue. Clues whose categories are not
+assigned yet are simply deferred.
+
+Partial clue evaluation follows the same idea as the sudoku solver:
+`eq`, `pos`, `nextto`, `leftof`, `immleft` and `notsame` each become
+`Just True`, `Just False` or `Nothing` depending on what is known so
+far. `Just False` kills the branch; everything else survives.
+
+The same laziness trick as the sudoku solver applies to counting:
+`--count 2` stops as soon as two solutions are known, which is
+sufficient for uniqueness checking.
+
 ## Why these designs
 
 - **Immutability everywhere** makes solvers composable and testable:
@@ -71,4 +91,5 @@ collapses completely.
 - **Laziness** (`[Solution]`) gives bounded counting for free.
 - The typeclass `Puzzle` (`parsePuzzle`, `solveLimit`,
   `renderSolution`, `renderPuzzle`) is the single extension point for
-  new puzzle types.
+  new puzzle types; sudoku, nonogram and logic puzzles all implement
+  it and share the CLI's `--count` handling.

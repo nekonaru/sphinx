@@ -13,6 +13,8 @@ import System.IO (hPutStrLn, stderr, withFile, IOMode(ReadMode), hGetContents)
 
 import Sphinx.Class (Puzzle(..))
 import Sphinx.Nonogram.Puzzle ()
+import Sphinx.Logic.Puzzle ()
+import qualified Sphinx.Logic.DSL as Logic
 import Sphinx.Error (renderError)
 import qualified Sphinx.Nonogram.Solve as Nonogram
 import qualified Sphinx.Nonogram.Render as NRender
@@ -37,9 +39,15 @@ data NonogramOpts = NonogramOpts
   , nonogramCount :: Int
   }
 
+data LogicOpts = LogicOpts
+  { logicFile :: FilePath
+  , logicCount :: Int
+  }
+
 data Command
   = CmdSudoku SudokuOpts
   | CmdNonogram NonogramOpts
+  | CmdLogic LogicOpts
 
 sudokuOpts :: Parser SudokuOpts
 sudokuOpts = SudokuOpts
@@ -61,12 +69,21 @@ nonogramOpts = NonogramOpts
         (long "count" <> metavar "N" <> value 1
         <> help "count up to N solutions (default 1); use 2 to check uniqueness")
 
+logicOpts :: Parser LogicOpts
+logicOpts = LogicOpts
+  <$> argument str (metavar "FILE" <> help "puzzle file, or '-' for stdin")
+  <*> option auto
+        (long "count" <> metavar "N" <> value 1
+        <> help "count up to N solutions (default 1); use 2 to check uniqueness")
+
 commandParser :: Parser Command
 commandParser = subparser
   ( command "sudoku"
       (info (CmdSudoku <$> sudokuOpts) (progDesc "Solve or generate a sudoku puzzle"))
   <> command "nonogram"
       (info (CmdNonogram <$> nonogramOpts) (progDesc "Solve a nonogram puzzle"))
+  <> command "logic"
+      (info (CmdLogic <$> logicOpts) (progDesc "Solve a logic (zebra) puzzle"))
   )
 
 main :: IO ()
@@ -75,12 +92,13 @@ main = do
   case cmd of
     CmdSudoku o -> runSudoku o
     CmdNonogram o -> runNonogram o
+    CmdLogic o -> runLogic o
   where
     opts = info (commandParser <**> helper <**> versionOption)
       ( fullDesc
-      <> progDesc "Sphinx: constraint-based puzzle solver (sudoku, nonogram)"
+      <> progDesc "Sphinx: constraint-based puzzle solver (sudoku, nonogram, logic)"
       <> header "sphinx - puzzle solver" )
-    versionOption = infoOption "sphinx 0.1.0" (long "version" <> help "show version")
+    versionOption = infoOption "sphinx 0.2.0" (long "version" <> help "show version")
 
 -- Helpers ------------------------------------------------------------
 
@@ -148,6 +166,22 @@ countLine :: Int -> Int -> String
 countLine found cap
   | found >= cap = show cap ++ " or more solution(s); raise --count to see them all"
   | otherwise = show found ++ " solution(s)"
+
+runLogic :: LogicOpts -> IO ()
+runLogic o
+  | logicCount o < 1 = die "--count must be at least 1"
+  | otherwise = do
+      content <- readInput (logicFile o)
+      case Logic.parseLogic content of
+        Left err -> die (renderError err)
+        Right puzzle -> do
+          let limit = logicCount o
+              solutions = Logic.solveLimit limit puzzle
+          case solutions of
+            [] -> die "no solution exists for this puzzle"
+            (sol : _) -> putStrLn (renderSolution puzzle sol)
+          when (logicCount o > 1) $
+            putStrLn (countLine (length solutions) limit)
 
 runNonogram :: NonogramOpts -> IO ()
 runNonogram o

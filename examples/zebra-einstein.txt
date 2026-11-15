@@ -1,0 +1,10 @@
+houses: 3
+category name: Alice Bob Carol
+category drink: tea coffee juice
+category color: red green blue
+clues:
+pos Alice 1
+eq tea green
+notsame Bob tea
+eq Carol juice
+leftof red juice

@@ -6,6 +6,7 @@ module Main (main) where
 
 import Data.List (intercalate)
 import Data.Word (Word64)
+import qualified Data.Vector as V
 import Test.QuickCheck
 import Test.Hspec
 
@@ -19,6 +20,9 @@ import qualified Sphinx.Nonogram.Render as NRender
 import qualified Sphinx.Nonogram.Solve as NS
 import Sphinx.Nonogram.Types (Nonogram(..), gridRows, gridCols, filledCount)
 import qualified Sphinx.Nonogram.Types as NT
+import qualified Sphinx.Logic.DSL as LD
+import Sphinx.Logic.Puzzle ()
+import qualified Sphinx.Logic.Render as LRender
 import qualified Sphinx.Sudoku.Generate as Gen
 import Sphinx.Sudoku.Puzzle ()
 import Sphinx.Nonogram.Puzzle ()
@@ -38,6 +42,7 @@ main = hspec $ do
   sudokuPropertySpec
   generateSpec
   nonogramSpec
+  logicSpec
   classSpec
   fuzzSpec
   goldenSpec
@@ -224,6 +229,106 @@ fuzzSpec = describe "Hostile input fuzzing" $ do
         Left _ -> True
         Right _ -> True
 
+zebraTiny :: String
+zebraTiny = unlines
+  [ "houses: 3"
+  , "category name: Alice Bob Carol"
+  , "category drink: tea coffee juice"
+  , "category color: red green blue"
+  , "clues:"
+  , "pos Alice 1"
+  , "eq tea green"
+  , "notsame Bob tea"
+  , "eq Carol juice"
+  , "leftof red juice"
+  ]
+
+zebraUnderconstrained :: String
+zebraUnderconstrained = unlines
+  [ "houses: 3"
+  , "category name: Alice Bob Carol"
+  , "category drink: tea coffee juice"
+  , "category color: red green blue"
+  , "clues:"
+  , "eq tea green"
+  , "notsame Bob tea"
+  , "eq Carol juice"
+  , "leftof red juice"
+  ]
+
+logicSpec :: Spec
+logicSpec = describe "Logic (zebra) puzzles" $ do
+  it "parses a valid puzzle" $
+    case LD.parseLogic zebraTiny of
+      Right _ -> True `shouldBe` True
+      Left e -> expectationFailure (show e)
+
+  it "rejects a clue with an unknown value" $
+    case LD.parseLogic (replaceLine "eq tea green" "eq zzz green" zebraTiny) of
+      Left (LogicFormat _) -> True `shouldBe` True
+      Left _ -> expectationFailure "expected a LogicFormat error"
+      Right _ -> expectationFailure "expected a parse failure"
+
+  it "rejects a clue relating values of the same category" $
+    case LD.parseLogic (replaceLine "eq tea green" "eq Alice Bob" zebraTiny) of
+      Left (LogicInconsistent _) -> True `shouldBe` True
+      Left _ -> expectationFailure "expected a LogicInconsistent error"
+      Right _ -> expectationFailure "expected a parse failure"
+
+  it "rejects a category with the wrong number of values" $
+    case LD.parseLogic (replaceLine "category color: red green blue" "category color: red green" zebraTiny) of
+      Left (LogicFormat _) -> True `shouldBe` True
+      Left _ -> expectationFailure "expected a LogicFormat error"
+      Right _ -> expectationFailure "expected a parse failure"
+
+  it "rejects more than 6 houses" $
+    case LD.parseLogic ("houses: 7\ncategory name: Alice Bob Carol Dave Erin Frank Grace\nclues:\npos Alice 1\n") of
+      Left (LogicFormat _) -> True `shouldBe` True
+      Left _ -> expectationFailure "expected a LogicFormat error"
+      Right _ -> expectationFailure "expected a parse failure"
+
+  it "solves the example puzzle to the known unique solution" $
+    case LD.parseLogic zebraTiny of
+      Left e -> expectationFailure (show e)
+      Right p -> case LD.solveLimit 1 p of
+        [sol] -> V.toList (V.map V.toList (LD.unLogicSolution sol)) `shouldBe`
+          [ ["Alice", "Bob", "Carol"]
+          , ["tea", "coffee", "juice"]
+          , ["green", "red", "blue"]
+          ]
+        _ -> expectationFailure "expected exactly one solution"
+
+  it "reports a unique solution for the example" $
+    case LD.parseLogic zebraTiny of
+      Left e -> expectationFailure (show e)
+      Right p -> length (LD.solveLimit 2 p) `shouldBe` 1
+
+  it "finds multiple solutions for the underconstrained puzzle" $
+    case LD.parseLogic zebraUnderconstrained of
+      Left e -> expectationFailure (show e)
+      Right p -> length (LD.solveLimit 2 p) `shouldBe` 2
+
+  it "solves through the shared typeclass interface" $
+    case parsePuzzle zebraTiny :: Either SphinxError LD.LogicPuzzle of
+      Left e -> expectationFailure (show e)
+      Right p -> firstSolution p `shouldSatisfy` isJustOk
+
+  it "renders the puzzle with question marks when unsolved" $
+    case LD.parseLogic zebraTiny of
+      Left e -> expectationFailure (show e)
+      Right p -> do
+        let rendered = LRender.renderPuzzle p
+        rendered `shouldSatisfy` (not . null . lines)
+        rendered `shouldSatisfy` any (== '?')
+
+-- Replace the first occurrence of @old@ with @new@.
+replaceLine :: String -> String -> String -> String
+replaceLine old new input =
+  let (before, rest) = break (== old) (lines input)
+  in case rest of
+       [] -> input
+       (_ : after) -> unlines (before ++ [new] ++ after)
+
 heartPuzzle :: String
 heartPuzzle = unlines ["2 2", "7", "7", "5", "3", "1", "---", "2", "4", "5", "5", "5", "4", "2"]
 
@@ -234,6 +339,13 @@ goldenSpec = describe "Golden rendering" $ do
       Left e -> expectationFailure (show e)
       Right g -> case solveUpTo 1 g of
         (sol : _) -> goldenText "test/golden/sudoku-easy-solution.txt" (renderGrid sol)
+        [] -> expectationFailure "no solution found"
+
+  it "renders the logic example solution exactly" $
+    case LD.parseLogic zebraTiny of
+      Left e -> expectationFailure (show e)
+      Right p -> case LD.solveLimit 1 p of
+        (sol : _) -> goldenText "test/golden/zebra-einstein.txt" (LRender.renderSolution p sol)
         [] -> expectationFailure "no solution found"
 
   it "renders the nonogram heart solution exactly" $

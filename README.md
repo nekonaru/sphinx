@@ -4,8 +4,8 @@
     <img src="assets/logo-mark.png" alt="Sphinx logo" width="120" />
   </picture>
   <h1>Sphinx: Puzzle Solver</h1>
-  <p><b>Constraint-based puzzle solver: sudoku and nonogram, solved fast,<br/>
-  explained step by step. A CLI and a reusable library.</b></p>
+  <p><b>Constraint-based puzzle solver: sudoku, nonogram and logic puzzles,<br/>
+  solved fast, explained step by step. A CLI and a reusable library.</b></p>
 
   <a href="https://github.com/nekonaru/sphinx/releases"><img src="https://img.shields.io/github/v/release/nekonaru/sphinx?style=flat-square&color=blue" alt="Release" /></a>
   <a href="https://github.com/nekonaru/sphinx/actions/workflows/ci.yml"><img src="https://github.com/nekonaru/sphinx/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
@@ -20,7 +20,7 @@
 **English** | [Bahasa Indonesia](README.id.md)
 
 > [!NOTE]
-> Sphinx is a puzzle solver for sudoku and nonogram puzzles. It reads a text file, prints the answer, explains how it got there, and checks whether a puzzle is uniquely solvable.
+> Sphinx is a puzzle solver for sudoku, nonogram and logic (zebra) puzzles. It reads a text file, prints the answer, explains how it got there, and checks whether a puzzle is uniquely solvable.
 
 ---
 
@@ -44,7 +44,7 @@
 
 ## About
 
-**Sphinx** is an open source puzzle solver written in Haskell. It handles sudoku and nonogram puzzles, explains how it solved a sudoku step by step, checks whether a puzzle has a unique solution, and can generate fresh sudoku puzzles with a guaranteed unique solution. Use it as a command line tool or as a library behind the `Puzzle` typeclass.
+**Sphinx** is an open source puzzle solver written in Haskell. It handles sudoku, nonogram and zebra (Einstein) logic puzzles, explains how it solved a sudoku step by step, checks whether a puzzle has a unique solution, and can generate fresh sudoku puzzles with a guaranteed unique solution. Use it as a command line tool or as a library behind the `Puzzle` typeclass.
 
 ---
 
@@ -60,6 +60,14 @@
 | **Solution counting** | `--count N` counts up to N solutions; `--count 2` tells you whether a puzzle is unique |
 | **Puzzle generator** | `--generate easy\|medium\|hard` creates a new sudoku with a guaranteed unique solution (`--seed` for reproducible puzzles) |
 | **Nonogram rendering** | Solved nonograms print as a block image with aligned row and column clues |
+
+### Logic puzzles
+
+| Feature | Description |
+|---------|-------------|
+| **Logic puzzle solver** | Six clue types (`eq`, `pos`, `nextto`, `leftof`, `immleft`, `notsame`); solves small Einstein (zebra) puzzles with up to 6 houses |
+| **Solution counting** | `--count N` counts up to N solutions; `--count 2` tells you whether the puzzle is unique |
+| **Aligned table output** | Solved puzzles print as a small table, one row per category, one column per house |
 
 ### Library
 
@@ -158,6 +166,8 @@ sphinx sudoku examples/sudoku-hard.txt --count 2
 - **Generate a puzzle**: `sphinx sudoku --generate hard --seed 42`
 - **Solve a nonogram**: `sphinx nonogram examples/nonogram-heart.txt`
 - **Nonogram uniqueness**: `sphinx nonogram examples/nonogram-heart.txt --count 2`
+- **Solve a logic puzzle**: `sphinx logic examples/zebra-einstein.txt`
+- **Logic uniqueness**: `sphinx logic examples/zebra-einstein.txt --count 2`
 - **Search statistics**: `sphinx nonogram examples/nonogram-heart.txt --steps`
 - **From a pipe**: `cat examples/sudoku-easy.txt | sphinx sudoku -`
 
@@ -187,6 +197,23 @@ Nonogram: row clue lines, a separator line with `---`, then column clue lines. E
 4
 2
 ```
+
+Logic: declare the house count, named categories of values, then a `clues:` section. Every category must have exactly `houses` values and values may not repeat across categories. House count is between 2 and 6.
+
+```
+houses: 3
+category name: Alice Bob Carol
+category drink: tea coffee juice
+category color: red green blue
+clues:
+pos Alice 1
+eq tea green
+notsame Bob tea
+eq Carol juice
+leftof red juice
+```
+
+Clues: `eq X Y` (same house), `pos X N` (X is in house N), `nextto X Y` (adjacent), `leftof X Y` (somewhere left), `immleft X Y` (immediately left), `notsame X Y` (different houses).
 
 ### Library usage
 
@@ -227,11 +254,12 @@ sphinx/
 │   │   ├── Class.hs             # Puzzle typeclass and helpers
 │   │   ├── Error.hs             # Typed errors for every failure mode
 │   │   ├── Sudoku/              # Types, Parse, Solve, Render, Generate, Puzzle
-│   │   └── Nonogram/            # Types, Parse, Line, Solve, Render, Puzzle
+│   │   ├── Nonogram/            # Types, Parse, Line, Solve, Render, Puzzle
+│   │   └── Logic/               # DSL, Render, Puzzle (zebra puzzles)
 ├── test/
 │   ├── Spec.hs                  # hspec + QuickCheck + golden tests
 │   └── golden/                  # Expected renderer output
-├── examples/                    # Sample puzzles (sudoku, nonogram)
+├── examples/                    # Sample puzzles (sudoku, nonogram, logic)
 ├── docs/
 │   └── algorithms.md            # How the solvers work
 ├── assets/
@@ -278,7 +306,7 @@ cabal test --test-show-details=direct
 | Property tests | QuickCheck properties pass (solver correctness, input fuzzing) |
 | Golden tests | Renderer output matches `test/golden/` exactly |
 
-The suite has 34 examples and runs in about a second.
+The suite has 45 examples and runs in about a second.
 
 ---
 

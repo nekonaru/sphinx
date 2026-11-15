@@ -4,8 +4,8 @@
     <img src="assets/logo-mark.png" alt="Logo Sphinx" width="120" />
   </picture>
   <h1>Sphinx: Penyelesai Puzzle</h1>
-  <p><b>Penyelesai puzzle berbasis constraint: sudoku dan nonogram, diselesaikan cepat,<br/>
-  dijelaskan langkah demi langkah. CLI dan library yang bisa dipakai ulang.</b></p>
+  <p><b>Penyelesai puzzle berbasis constraint: sudoku, nonogram dan puzzle logika,<br/>
+  diselesaikan cepat, dijelaskan langkah demi langkah. CLI dan library yang bisa dipakai ulang.</b></p>
 
   <a href="https://github.com/nekonaru/sphinx/releases"><img src="https://img.shields.io/github/v/release/nekonaru/sphinx?style=flat-square&color=blue" alt="Release" /></a>
   <a href="https://github.com/nekonaru/sphinx/actions/workflows/ci.yml"><img src="https://github.com/nekonaru/sphinx/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
@@ -20,7 +20,7 @@
 [English](README.md) | **Bahasa Indonesia**
 
 > [!NOTE]
-> Sphinx adalah penyelesai puzzle untuk sudoku dan nonogram. Sphinx membaca file teks, mencetak jawabannya, menjelaskan langkah penyelesaiannya, dan mengecek apakah sebuah puzzle bisa diselesaikan secara unik.
+> Sphinx adalah penyelesai puzzle untuk sudoku, nonogram dan puzzle logika (zebra). Sphinx membaca file teks, mencetak jawabannya, menjelaskan langkah penyelesaiannya, dan mengecek apakah sebuah puzzle bisa diselesaikan secara unik.
 
 ---
 
@@ -44,7 +44,7 @@
 
 ## Tentang
 
-**Sphinx** adalah penyelesai puzzle open source yang ditulis dalam Haskell. Sphinx menangani puzzle sudoku dan nonogram, menjelaskan langkah penyelesaian sudoku, mengecek apakah sebuah puzzle memiliki solusi unik, dan bisa membuat puzzle sudoku baru dengan solusi unik yang dijamin. Pakai sebagai alat baris perintah (CLI) atau sebagai library di balik typeclass `Puzzle`.
+**Sphinx** adalah penyelesai puzzle open source yang ditulis dalam Haskell. Sphinx menangani puzzle sudoku, nonogram dan puzzle logika gaya Einstein (zebra), menjelaskan langkah penyelesaian sudoku, mengecek apakah sebuah puzzle memiliki solusi unik, dan bisa membuat puzzle sudoku baru dengan solusi unik yang dijamin. Pakai sebagai alat baris perintah (CLI) atau sebagai library di balik typeclass `Puzzle`.
 
 ---
 
@@ -60,6 +60,14 @@
 | **Menghitung solusi** | `--count N` menghitung sampai N solusi; `--count 2` memberitahu apakah puzzle itu unik |
 | **Generator puzzle** | `--generate easy\|medium\|hard` membuat sudoku baru dengan solusi unik yang dijamin (`--seed` untuk puzzle yang reproducible) |
 | **Render nonogram** | Nonogram yang selesai dicetak sebagai gambar blok dengan petunjuk baris dan kolom yang rapi |
+
+### Puzzle logika
+
+| Fitur | Deskripsi |
+|-------|-----------|
+| **Solver puzzle logika** | Enam tipe petunjuk (`eq`, `pos`, `nextto`, `leftof`, `immleft`, `notsame`); menyelesaikan puzzle Einstein (zebra) kecil dengan hingga 6 rumah |
+| **Menghitung solusi** | `--count N` menghitung sampai N solusi; `--count 2` memberitahu apakah puzzle itu unik |
+| **Output tabel rapi** | Puzzle yang selesai dicetak sebagai tabel kecil, satu baris per kategori, satu kolom per rumah |
 
 ### Library
 
@@ -158,6 +166,8 @@ sphinx sudoku examples/sudoku-hard.txt --count 2
 - **Buat puzzle baru**: `sphinx sudoku --generate hard --seed 42`
 - **Selesaikan nonogram**: `sphinx nonogram examples/nonogram-heart.txt`
 - **Keunikan nonogram**: `sphinx nonogram examples/nonogram-heart.txt --count 2`
+- **Selesaikan puzzle logika**: `sphinx logic examples/zebra-einstein.txt`
+- **Keunikan logika**: `sphinx logic examples/zebra-einstein.txt --count 2`
 - **Statistik pencarian**: `sphinx nonogram examples/nonogram-heart.txt --steps`
 - **Dari pipe**: `cat examples/sudoku-easy.txt | sphinx sudoku -`
 
@@ -187,6 +197,23 @@ Nonogram: baris petunjuk baris, baris pemisah `---`, lalu baris petunjuk kolom. 
 4
 2
 ```
+
+Logika: tentukan jumlah rumah, kategori berisi nilai, lalu bagian `clues:`. Setiap kategori harus memiliki tepat `houses` nilai dan nilai tidak boleh berulang antar kategori. Jumlah rumah antara 2 dan 6.
+
+```
+houses: 3
+category name: Alice Bob Carol
+category drink: tea coffee juice
+category color: red green blue
+clues:
+pos Alice 1
+eq tea green
+notsame Bob tea
+eq Carol juice
+leftof red juice
+```
+
+Petunjuk: `eq X Y` (rumah sama), `pos X N` (X ada di rumah N), `nextto X Y` (berdekatan), `leftof X Y` (di kiri), `immleft X Y` (langsung di kiri), `notsame X Y` (rumah berbeda).
 
 ### Pemakaian sebagai library
 
@@ -227,11 +254,12 @@ sphinx/
 │   │   ├── Class.hs             # Typeclass Puzzle dan helper
 │   │   ├── Error.hs             # Error bertipe untuk setiap mode kegagalan
 │   │   ├── Sudoku/              # Types, Parse, Solve, Render, Generate, Puzzle
-│   │   └── Nonogram/            # Types, Parse, Line, Solve, Render, Puzzle
+│   │   ├── Nonogram/            # Types, Parse, Line, Solve, Render, Puzzle
+│   │   └── Logic/               # DSL, Render, Puzzle (puzzle zebra)
 ├── test/
 │   ├── Spec.hs                  # hspec + QuickCheck + golden test
 │   └── golden/                  # Keluaran renderer yang diharapkan
-├── examples/                    # Contoh puzzle (sudoku, nonogram)
+├── examples/                    # Contoh puzzle (sudoku, nonogram, logika)
 ├── docs/
 │   └── algorithms.md            # Cara kerja solver
 ├── assets/
@@ -278,7 +306,7 @@ cabal test --test-show-details=direct
 | Property test | Property QuickCheck lolos (kebenaran solver, fuzzing input) |
 | Golden test | Keluaran renderer cocok persis dengan `test/golden/` |
 
-Suite berisi 34 contoh dan berjalan dalam sekitar satu detik.
+Suite berisi 45 contoh dan berjalan dalam sekitar satu detik.
 
 ---
 

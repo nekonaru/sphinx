@@ -22,6 +22,12 @@ data SphinxError
   | -- | The nonogram shape is impossible (for example a row clue
     -- list that cannot fit the column count).
     NonogramInconsistent String
+  | -- | The logic puzzle input is malformed (bad section, unknown
+    -- clue token, unknown value, wrong house count, and so on).
+    LogicFormat String
+  | -- | The logic puzzle cannot be solved (for example a clue
+    -- references conflicting houses).
+    LogicInconsistent String
   deriving (Eq, Show)
 
 -- | Render an error as a single human readable sentence.
@@ -41,3 +47,7 @@ renderError err = case err of
     "malformed nonogram: " ++ what
   NonogramInconsistent what ->
     "inconsistent nonogram: " ++ what
+  LogicFormat what ->
+    "malformed logic puzzle: " ++ what
+  LogicInconsistent what ->
+    "unsatisfiable logic puzzle: " ++ what

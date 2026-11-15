@@ -4,6 +4,33 @@ All notable changes to this project are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 this project adheres to [Semantic Versioning](https://semver.org/).
 
+## v0.2.0 - 2026-11-16
+
+Sphinx grows a third puzzle type: a small Einstein (zebra) puzzle DSL.
+
+### New features
+
+- **Logic puzzle solver.** A small DSL and solver for zebra (Einstein) style logic puzzles: houses, categories, and six clue types (`eq`, `pos`, `nextto`, `leftof`, `immleft`, `notsame`).
+- **`sphinx logic FILE`.** Solve a logic puzzle and print the aligned table; `--count N` counts up to N solutions.
+- **`SolveStats` reporting.** The logic solver reports guesses and pruned branches.
+
+### Improvements
+
+- **Logo assets.** Square mark added in light and dark variants; the README header uses a dark-mode aware `<picture>` element.
+- **Performance.** Nonogram line propagation fused into a single pass with early exit; a 15x15 random demo nonogram solves in about 130 ms.
+- **Examples.** `examples/zebra-einstein.txt` ships a small, uniquely solvable zebra puzzle.
+- **Testing.** 45 test examples including the logic puzzle suite; everything green on GHC 9.6, 9.8 and 9.10.
+
+### Bug fixes
+
+- **Unicode digits.** Both parsers now reject non-ASCII digits with a clear error instead of storing out-of-range values or crashing.
+- **Logic DSL parser.** The `category name: v1 ...` line now accepts the natural spacing (`name:` attached or detached).
+
+### Usage
+
+- `sphinx logic examples/zebra-einstein.txt` solves the zebra puzzle and prints the table.
+- `sphinx logic examples/zebra-einstein.txt --count 2` checks uniqueness.
+
 ## v0.1.0 - 2026-11-15
 
 First public release.

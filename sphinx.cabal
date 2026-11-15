@@ -1,6 +1,6 @@
 cabal-version:      2.4
 name:               sphinx
-version:            0.1.0
+version:            0.2.0
 synopsis:           Puzzle solver for sudoku, nonogram and logic puzzles
 description:
     Sphinx solves constraint-based puzzles. It ships a typed, purely
@@ -44,6 +44,9 @@ library
         Sphinx.Nonogram.Solve
         Sphinx.Nonogram.Render
         Sphinx.Nonogram.Puzzle
+        Sphinx.Logic.DSL
+        Sphinx.Logic.Render
+        Sphinx.Logic.Puzzle
     build-depends:
         base >=4.17 && <5,
         containers >=0.6 && <0.8,
