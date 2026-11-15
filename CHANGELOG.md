@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.1.0] - 2026-11-15
+## v0.1.0 - 2026-11-15
 
 First public release.
 
@@ -32,3 +32,11 @@ First public release.
 ### Bug fixes
 
 - None yet; this is the first release.
+
+### Usage
+
+- `sphinx sudoku examples/sudoku-easy.txt` solves and prints the grid.
+- `sphinx sudoku examples/sudoku-hard.txt --count 2` checks uniqueness.
+- `sphinx sudoku examples/sudoku-easy.txt --steps` prints the deduction steps.
+- `sphinx sudoku --generate hard --seed 42` generates a new puzzle.
+- `sphinx nonogram examples/nonogram-heart.txt` renders the solved image.

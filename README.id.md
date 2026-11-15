@@ -1,108 +1,172 @@
-# Sphinx - Penyelesai puzzle dalam Haskell
+<div align="center">
+  <img src="assets/logo.png" alt="Logo Sphinx" width="120" />
+  <h1>Sphinx: Penyelesai Puzzle</h1>
+  <p><b>Penyelesai puzzle berbasis constraint: sudoku dan nonogram, diselesaikan cepat,<br/>
+  dijelaskan langkah demi langkah. CLI dan library yang bisa dipakai ulang.</b></p>
 
-<img src="assets/logo.png" alt="Logo Sphinx" width="640">
+  <a href="https://github.com/nekonaru/sphinx/releases"><img src="https://img.shields.io/github/v/release/nekonaru/sphinx?style=flat-square&color=blue" alt="Release" /></a>
+  <a href="https://github.com/nekonaru/sphinx/actions/workflows/ci.yml"><img src="https://github.com/nekonaru/sphinx/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <img src="https://img.shields.io/badge/Haskell-%3E%3D9.6.6-5e5086?style=flat-square&logo=haskell&logoColor=white" alt="Haskell" />
+  <img src="https://img.shields.io/badge/Platform-Linux%20%C2%B7%20macOS%20%C2%B7%20Windows-2E8B57?style=flat-square" alt="Platform" />
+  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status" />
+</div>
 
-[![CI](https://github.com/nekonaru/sphinx/actions/workflows/ci.yml/badge.svg)](https://github.com/nekonaru/sphinx/actions/workflows/ci.yml)
+<br />
 
-Sphinx menyelesaikan puzzle berbasis constraint. Ini adalah library
-Haskell ditambah CLI yang menangani sudoku dan nonogram, menjelaskan
-cara puzzle sudoku diselesaikan langkah demi langkah, dan mengecek
-apakah sebuah puzzle punya solusi unik.
+[English](README.md) | **Bahasa Indonesia**
 
-Bahasa Indonesia | [English](README.md)
+> [!NOTE]
+> Sphinx adalah penyelesai puzzle untuk sudoku dan nonogram. Sphinx membaca file teks, mencetak jawabannya, menjelaskan langkah penyelesaiannya, dan mengecek apakah sebuah puzzle bisa diselesaikan secara unik.
+
+---
+
+## Daftar Isi
+
+- [Tentang](#tentang)
+- [Fitur](#fitur)
+- [Kebutuhan](#kebutuhan)
+- [Instalasi](#instalasi)
+- [Pemakaian](#pemakaian)
+- [Struktur Proyek](#struktur-proyek)
+- [Pengembangan](#pengembangan)
+- [Pengujian](#pengujian)
+- [Keamanan](#keamanan)
+- [Integrasi Berkelanjutan](#integrasi-berkelanjutan)
+- [FAQ](#faq)
+- [Penulis](#penulis)
+- [Lisensi](#lisensi)
+
+---
+
+## Tentang
+
+**Sphinx** adalah penyelesai puzzle open source yang ditulis dalam Haskell. Sphinx menangani puzzle sudoku dan nonogram, menjelaskan langkah penyelesaian sudoku, mengecek apakah sebuah puzzle memiliki solusi unik, dan bisa membuat puzzle sudoku baru dengan solusi unik yang dijamin. Pakai sebagai alat baris perintah (CLI) atau sebagai library di balik typeclass `Puzzle`.
+
+---
 
 ## Fitur
 
-- **Solver sudoku** dengan propagasi constraint (naked single, hidden
-  single) dan backtracking dengan heuristik MRV (minimum remaining
-  values).
-- **Solver nonogram** dengan line solving, propagasi sampai fixpoint,
-  lalu backtracking pada baris atau kolom tersulit.
-- **Mode langkah demi langkah** (`--steps`) yang mencetak setiap
-  deduksi yang dilakukan solver sudoku, dari naked single sampai tebakan.
-- **Cek keunikan** (`--count 2`) untuk melihat apakah sebuah puzzle
-  punya tepat satu solusi.
-- **Generator puzzle** sudoku (`--generate easy|medium|hard`) yang
-  menjamin solusi unik.
-- **API library** lewat satu typeclass, jadi tipe puzzle baru bisa
-  dicolokkan ke antarmuka yang sama.
-- Property test (QuickCheck) dan golden test untuk renderer.
+### Solver
+
+| Fitur | Deskripsi |
+|-------|-----------|
+| **Solver sudoku** | Propagasi constraint (naked single, hidden single) lalu backtracking dengan heuristik minimum remaining values |
+| **Solver nonogram** | Line solving, propagasi constraint sampai fixpoint, lalu branch pada baris atau kolom dengan opsi paling sedikit |
+| **Mode langkah demi langkah** | `--steps` mencetak setiap deduksi yang dilakukan solver, diklasifikasikan sebagai `NakedSingle`, `HiddenSingle` atau `Guess` (Bahasa Indonesia) |
+| **Menghitung solusi** | `--count N` menghitung sampai N solusi; `--count 2` memberitahu apakah puzzle itu unik |
+| **Generator puzzle** | `--generate easy\|medium\|hard` membuat sudoku baru dengan solusi unik yang dijamin (`--seed` untuk puzzle yang reproducible) |
+| **Render nonogram** | Nonogram yang selesai dicetak sebagai gambar blok dengan petunjuk baris dan kolom yang rapi |
+
+### Library
+
+| Fitur | Deskripsi |
+|-------|-----------|
+| **Typeclass `Puzzle`** | Satu antarmuka seragam: `parsePuzzle`, `solveLimit`, `renderSolution`, `renderPuzzle` |
+| **Inti yang murni** | Semua logika solving bersifat lazy, murni dan bebas efek samping; I/O hanya ada di CLI |
+| **Error bertipe** | Setiap mode kegagalan punya error bertipe dengan pesan yang ramah |
+
+### Contoh dan Pengujian
+
+| Fitur | Deskripsi |
+|-------|-----------|
+| **Contoh puzzle** | `examples/` berisi sudoku mudah, sudoku sulit, sudoku dengan banyak solusi dan dua nonogram |
+| **Property test** | Property QuickCheck untuk kebenaran solver, plus fuzzing input hostile untuk kedua parser |
+| **Golden test** | Keluaran renderer diverifikasi terhadap file golden yang dikomit |
+
+---
+
+## Kebutuhan
+
+| Dependency | Versi Minimum | Catatan |
+|------------|---------------|---------|
+| **GHC** | 9.6.6 | Pasang lewat [ghcup](https://www.haskell.org/ghcup/) |
+| **cabal-install** | 3.10+ | Pasang juga lewat ghcup |
+| **Index Hackage** | terbaru | `cabal update` mengunduhnya sekali |
+| **C compiler** | apa pun yang dibawa ghcup | Hanya dibutuhkan jika ada dependency yang mengompilasi C (tidak ada pada dependency saat ini) |
+
+> [!TIP]
+> Kalau kamu hanya ingin CLI-nya dan tidak berencana build dari source, bagian build di bawah tetap cuma dua perintah: `cabal update` dan `cabal install exe:sphinx`.
+
+---
 
 ## Instalasi
 
-Pasang GHC dan cabal terlebih dahulu (misalnya dengan
-[ghcup](https://www.haskell.org/ghcup/)):
+### Opsi A: Build dan pasang CLI
 
-```sh
+1. Pasang toolchain (lewati kalau kamu sudah punya ghcup):
+
+```bash
 curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
 ghcup install ghc --set recommended
 ghcup install cabal --set recommended
 ```
 
-Lalu build dan pasang Sphinx:
+2. Ambil kode dan pasang executable-nya:
 
-```sh
+```bash
 git clone https://github.com/nekonaru/sphinx.git
 cd sphinx
 cabal update
 cabal install exe:sphinx
 ```
 
+3. Verifikasi instalasi:
+
+```bash
+sphinx --version
+sphinx --help
+```
+
+### Opsi B: Build dari source untuk development
+
+Sama seperti Opsi A, ditambah test suite:
+
+```bash
+cabal build --ghc-options=-Werror
+cabal test --test-show-details=direct
+```
+
+> [!IMPORTANT]
+> Build yang bersih berarti nol warning. Kalau `cabal build` mencetak `-W` warning, perubahannya belum siap.
+
+---
+
 ## Pemakaian
 
-Selesaikan sudoku dan cetak gridnya:
+### Peluncuran pertama
 
-```sh
+Selesaikan contoh puzzle yang disertakan dan cetak gridnya:
+
+```bash
 sphinx sudoku examples/sudoku-easy.txt
 ```
 
-Cek apakah puzzle itu unik:
+Cek bahwa puzzle itu benar-benar terselesaikan:
 
-```sh
+```bash
 sphinx sudoku examples/sudoku-hard.txt --count 2
 ```
 
-Cetak langkah-langkah deduksinya:
+### Pemakaian sehari-hari
 
-```sh
-sphinx sudoku examples/sudoku-easy.txt --steps
-```
+- **Selesaikan dengan penjelasan**: `sphinx sudoku examples/sudoku-easy.txt --steps`
+- **Cek keunikan**: `sphinx sudoku examples/sudoku-hard.txt --count 2`
+- **Buat puzzle baru**: `sphinx sudoku --generate hard --seed 42`
+- **Selesaikan nonogram**: `sphinx nonogram examples/nonogram-heart.txt`
+- **Keunikan nonogram**: `sphinx nonogram examples/nonogram-heart.txt --count 2`
+- **Statistik pencarian**: `sphinx nonogram examples/nonogram-heart.txt --steps`
+- **Dari pipe**: `cat examples/sudoku-easy.txt | sphinx sudoku -`
 
-Buat puzzle baru:
+### Format input
 
-```sh
-sphinx sudoku --generate hard --seed 42
-```
-
-Selesaikan nonogram dan tampilkan sebagai gambar blok:
-
-```sh
-sphinx nonogram examples/nonogram-heart.txt
-```
-
-Semua perintah juga membaca dari standard input bila kamu memberi `-`
-sebagai nama file:
-
-```sh
-cat examples/sudoku-easy.txt | sphinx sudoku -
-```
-
-## Format input
-
-### Sudoku
-
-Satu baris berisi 81 karakter, atau 9 baris berisi 9 karakter. `.` dan
-`0` berarti kosong, digit 1-9 adalah angka yang diberikan:
+Sudoku: satu baris berisi 81 karakter, atau 9 baris berisi 9 karakter. `.` dan `0` berarti kosong, digit 1-9 adalah angka yang diberikan.
 
 ```
 530070000600195000098000060800060003400803001700020006060000280000419005000080079
 ```
 
-### Nonogram
-
-Baris petunjuk baris, baris pemisah `---`, lalu baris petunjuk kolom.
-Setiap petunjuk adalah daftar panjang blok yang dipisah spasi; `0` pada
-satu baris berarti baris itu kosong:
+Nonogram: baris petunjuk baris, baris pemisah `---`, lalu baris petunjuk kolom. Setiap petunjuk adalah daftar panjang blok yang dipisah spasi; `0` pada satu baris berarti baris itu kosong.
 
 ```
 2 2
@@ -121,7 +185,7 @@ satu baris berarti baris itu kosong:
 2
 ```
 
-## Pemakaian sebagai library
+### Pemakaian sebagai library
 
 ```haskell
 import Sphinx.Class (Puzzle(..), firstSolution, isUnique)
@@ -135,7 +199,7 @@ main = case Sudoku.parseSudoku "530070000600195000098000060800060003400803001700
     print (isUnique grid)        -- True bila tepat satu solusi
 ```
 
-Typeclass `Puzzle` adalah antarmuka seragam untuk semua tipe puzzle:
+Typeclass `Puzzle` adalah satu-satunya titik ekstensi untuk tipe puzzle baru:
 
 ```haskell
 class Puzzle p where
@@ -146,37 +210,140 @@ class Puzzle p where
   renderPuzzle   :: p -> String
 ```
 
-## Pengembangan
+---
 
-```sh
-cabal build           # build library, CLI dan test
-cabal test            # jalankan hspec + QuickCheck + golden test
+## Struktur Proyek
+
+```
+sphinx/
+├── sphinx.cabal                 # Definisi package (library, CLI, test suite)
+├── app/
+│   └── Main.hs                  # Entry point CLI (optparse-applicative)
+├── src/
+│   ├── Sphinx/
+│   │   ├── Class.hs             # Typeclass Puzzle dan helper
+│   │   ├── Error.hs             # Error bertipe untuk setiap mode kegagalan
+│   │   ├── Sudoku/              # Types, Parse, Solve, Render, Generate, Puzzle
+│   │   └── Nonogram/            # Types, Parse, Line, Solve, Render, Puzzle
+├── test/
+│   ├── Spec.hs                  # hspec + QuickCheck + golden test
+│   └── golden/                  # Keluaran renderer yang diharapkan
+├── examples/                    # Contoh puzzle (sudoku, nonogram)
+├── docs/
+│   └── algorithms.md            # Cara kerja solver
+├── assets/
+│   └── logo.png
+├── README.md                    # English
+├── README.id.md                 # Bahasa Indonesia (file ini)
+└── LICENSE                      # MIT
 ```
 
-Struktur source mengikuti layout standar library + executable: `src/`
-berisi library, `app/Main.hs` CLI-nya, `test/` test suite dan
-`examples/` contoh puzzle. Cara kerja solver dijelaskan di
-`docs/algorithms.md`.
+---
 
-## Performa
+## Pengembangan
 
-Diukur pada GHC 9.6 dengan kode hasil optimasi `-O2` di laptop Windows
-sekelas menengah (waktu wall CLI secara end-to-end):
+### Menambah fitur
 
-| Puzzle | Waktu |
-|--------|-------|
-| Sudoku sulit dari generator (`examples/sudoku-hard.txt`, seed 1234) | ~20 ms |
-| Nonogram heart (`examples/nonogram-heart.txt`) | ~20 ms |
+1. Tulis atau sesuaikan test dulu (hspec untuk contoh, QuickCheck untuk properti).
+2. Jaga library tetap murni; semua I/O tinggal di `app/Main.hs`.
+3. Build dengan warning sebagai error: `cabal build --ghc-options=-Werror`.
+4. Jalankan seluruh suite: `cabal test`.
+5. Perbarui `README.md` dan `README.id.md` bersama-sama, dan tambahkan satu baris ke kedua changelog.
 
-Solver menghitung sampai N solusi secara lazy, jadi cek keunikan
-berhenti di solusi kedua. Nonogram ukuran besar bisa lebih lama bila
-propagasi constraint per baris sering harus branch.
+> [!WARNING]
+> File di `test/golden/` adalah keluaran yang diharapkan. Perbarui hanya dengan menjalankan renderer lagi, jangan pernah mengeditnya dengan tangan.
 
-## Kontribusi
+### Menambah tipe puzzle baru
 
-Issue dan pull request disambut. Jalankan `cabal test` sebelum mengirim;
-CI menegakkan build bebas warning.
+1. Buat `src/Sphinx/<YourPuzzle>/` berisi modul `Types`, `Parse`, `Solve`, `Render`, `Puzzle`, mengikuti layout sudoku dan nonogram.
+2. Tambahkan instance dari typeclass `Puzzle` (lihat `src/Sphinx/Sudoku/Puzzle.hs`).
+3. Sambungkan ke CLI di `app/Main.hs` dan tambahkan test plus examples.
+
+---
+
+## Pengujian
+
+```bash
+cabal build --ghc-options=-Werror
+cabal test --test-show-details=direct
+```
+
+| Check | Requirement |
+|-------|-------------|
+| Build | Nol warning, nol error (`-Werror`) |
+| Unit test | Semua contoh lolos |
+| Property test | Property QuickCheck lolos (kebenaran solver, fuzzing input) |
+| Golden test | Keluaran renderer cocok persis dengan `test/golden/` |
+
+Suite berisi 34 contoh dan berjalan dalam sekitar satu detik.
+
+---
+
+## Keamanan
+
+Sphinx adalah alat offline: membaca file teks yang kamu tunjuk dan mencetak hasilnya. Sphinx tidak memakai jaringan, tidak menjalankan subproses, tidak menyimpan kredensial, dan tidak membuat file sementara. CLI menolak file yang lebih besar dari 1 MiB, dan kedua parser mengembalikan error bertipe untuk input yang rusak. Dependency di-build dengan `-Werror` di CI pada tiga versi GHC.
+
+> [!NOTE]
+> Laporkan kerentanan secara privat lewat GitHub Security Advisories: https://github.com/nekonaru/sphinx/security/advisories/new. Lihat [SECURITY.md](SECURITY.md).
+
+---
+
+## Integrasi Berkelanjutan
+
+| Workflow | Tujuan |
+|----------|--------|
+| `ci.yml` | Build dengan `-Werror` dan jalankan seluruh test suite pada GHC 9.6.6, 9.8.4 dan 9.10.1 |
+
+Branch `main` mewajibkan check `build-test` lolos sebelum merge; direct push oleh maintainer diizinkan. Rilis di-tag `vX.Y.Z` setelah CI hijau.
+
+---
+
+## FAQ
+
+<details><summary><b>Apakah Sphinx butuh internet?</b></summary>
+
+Tidak. Sphinx bekerja sepenuhnya offline. Hanya `cabal update` pada instalasi pertama yang mengunduh metadata package.
+
+</details>
+
+<details><summary><b>Kenapa Haskell?</b></summary>
+
+Fungsi murni, data immutable dan laziness cocok untuk solver backtracking: penghitung solusi (`--count`) berhenti begitu jawabannya diketahui.
+
+</details>
+
+<details><summary><b>Bisakah dipakai sebagai library?</b></summary>
+
+Bisa. Tambahkan package `sphinx` sebagai dependency dan gunakan typeclass `Puzzle`. Lihat [Pemakaian sebagai library](#pemakaian-sebagai-library).
+
+</details>
+
+<details><summary><b>Seberapa akurat tingkat kesulitan puzzle yang digenerate?</b></summary>
+
+Tingkat kesulitan ditentukan dari banyaknya angka yang dibiarkan (easy 40, medium 32, hard 26). Hard tidak sama dengan setiap puzzle tersulit versi manusia, tapi setiap puzzle hasil generator punya tepat satu solusi.
+
+</details>
+
+<details><summary><b>Apakah keluaran <code>--steps</code> berbahasa Inggris?</b></summary>
+
+Tidak. `--steps` mencetak langkah deduksi dalam Bahasa Indonesia, sesuai spesifikasi produk. Sisanya berbahasa Inggris.
+
+</details>
+
+---
+
+## Penulis
+
+<div align="center">
+
+| [![nekonaru](https://github.com/nekonaru.png?size=100)](https://github.com/nekonaru) |
+|:---:|
+| **nekonaru** ([GitHub](https://github.com/nekonaru)) |
+
+</div>
+
+---
 
 ## Lisensi
 
-[MIT](LICENSE) (c) 2026 nekonaru
+Didistribusikan di bawah **Lisensi MIT**. Lihat [`LICENSE`](LICENSE) untuk informasi lebih lanjut.
