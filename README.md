@@ -1,5 +1,8 @@
 <div align="center">
-  <img src="assets/logo.png" alt="Sphinx logo" width="120" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-mark-dark.png">
+    <img src="assets/logo-mark.png" alt="Sphinx logo" width="120" />
+  </picture>
   <h1>Sphinx: Puzzle Solver</h1>
   <p><b>Constraint-based puzzle solver: sudoku and nonogram, solved fast,<br/>
   explained step by step. A CLI and a reusable library.</b></p>

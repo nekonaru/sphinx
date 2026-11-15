@@ -1,5 +1,8 @@
 <div align="center">
-  <img src="assets/logo.png" alt="Logo Sphinx" width="120" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-mark-dark.png">
+    <img src="assets/logo-mark.png" alt="Logo Sphinx" width="120" />
+  </picture>
   <h1>Sphinx: Penyelesai Puzzle</h1>
   <p><b>Penyelesai puzzle berbasis constraint: sudoku dan nonogram, diselesaikan cepat,<br/>
   dijelaskan langkah demi langkah. CLI dan library yang bisa dipakai ulang.</b></p>
