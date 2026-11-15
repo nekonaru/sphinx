@@ -317,8 +317,8 @@ logicSpec = describe "Logic (zebra) puzzles" $ do
       Left e -> expectationFailure (show e)
 
   it "solves examples/zebra-einstein.txt to the golden output" $ do
-    example <- readFile "examples/zebra-einstein.txt"
-    case LD.parseLogic example of
+    zebraExampleText <- readFile "examples/zebra-einstein.txt"
+    case LD.parseLogic zebraExampleText of
       Left e -> expectationFailure (show e)
       Right p -> case LD.solveLimit 1 p of
         [sol] -> goldenText "test/golden/zebra-einstein.txt" (LRender.renderSolution p sol)

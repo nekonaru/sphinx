@@ -46,7 +46,8 @@ module Sphinx.Logic.DSL
   ) where
 
 import Data.Char (isControl)
-import Data.List (find, nub, permutations, sortBy, isSuffixOf, foldl')
+import Data.List (find, nub, permutations, sortBy, isSuffixOf)
+import qualified Data.List as L
 import Data.Ord (comparing, Down(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
@@ -154,7 +155,7 @@ parseSmallInt hi raw
   | length raw > 6 = Left (LogicFormat ("number too large: " ++ show raw))
   | not (all isAsciiDigit raw) = Left (LogicFormat ("expected digits, got " ++ show raw))
   | otherwise =
-      let v = foldl' (\acc ch -> acc * 10 + (fromEnum ch - fromEnum '0')) 0 raw
+      let v = L.foldl' (\acc ch -> acc * 10 + (fromEnum ch - fromEnum '0')) 0 raw
       in if v <= hi
            then Right v
            else Left (LogicFormat ("number out of range (maximum " ++ show hi ++ "): " ++ show v))
