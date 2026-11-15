@@ -12,7 +12,7 @@ module Sphinx.Nonogram.Solve
   , solveWithStats
   ) where
 
-import Data.List (minimumBy, transpose)
+import Data.List (foldl', minimumBy, transpose)
 import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import qualified Data.Vector as V

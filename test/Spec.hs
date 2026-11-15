@@ -36,6 +36,7 @@ main = hspec $ do
   generateSpec
   nonogramSpec
   classSpec
+  fuzzSpec
   goldenSpec
 
 parseSpec :: Spec
@@ -92,8 +93,8 @@ sudokuSolveSpec = describe "Sudoku solving" $ do
       Right g -> length (solveUpTo 2 g) `shouldBe` 2
 
   it "reports no solution when the puzzle is unsatisfiable" $ do
-    -- Mutated from the classic easy puzzle: one given (position 1)
-    -- changed to a digit that does not clash in its row, column or
+    -- Mutated from the classic easy puzzle: the first given (position
+    -- 0) changed to a digit that does not clash in its row, column or
     -- box, yet makes the puzzle unsatisfiable. Verified by the solver.
     let unsat = "130070000600195000098000060800060003400803001700020006060000280000419005000080079"
     case SP.parseSudoku unsat of
@@ -185,7 +186,7 @@ nonogramSpec = describe "Nonogram" $ do
   it "reports unsolvable puzzles without crashing" $ do
     let impossible = unlines ["2", "0", "2", "---", "2", "0", "2"]
     case parseNonogram impossible of
-      Left _ -> pure ()  -- rejected at parse time also acceptable
+      Left e -> expectationFailure ("expected parse to succeed, got: " ++ show e)
       Right p -> NS.solveUpTo 1 p `shouldBe` []
 
 classSpec :: Spec
@@ -204,6 +205,20 @@ classSpec = describe "Puzzle typeclass" $ do
     case parsePuzzle heartPuzzle :: Either SphinxError Nonogram of
       Left e -> expectationFailure (show e)
       Right p -> firstSolution p `shouldSatisfy` isJustOk
+
+fuzzSpec :: Spec
+fuzzSpec = describe "Hostile input fuzzing" $ do
+  it "sudoku parser never crashes on arbitrary strings" $
+    property $ \(s :: String) ->
+      case SP.parseSudoku s of
+        Left _ -> True
+        Right _ -> True
+
+  it "nonogram parser never crashes on arbitrary strings" $
+    property $ \(s :: String) ->
+      case parseNonogram s of
+        Left _ -> True
+        Right _ -> True
 
 heartPuzzle :: String
 heartPuzzle = unlines ["2 2", "7", "7", "5", "3", "1", "---", "2", "4", "5", "5", "5", "4", "2"]

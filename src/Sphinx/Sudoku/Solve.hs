@@ -14,7 +14,7 @@ module Sphinx.Sudoku.Solve
   ) where
 
 import Data.Bits ((.|.), (.&.), shiftL, complement, popCount, testBit)
-import Data.List (minimumBy)
+import Data.List (foldl', minimumBy)
 import Data.Ord (comparing)
 import qualified Data.Vector as V
 

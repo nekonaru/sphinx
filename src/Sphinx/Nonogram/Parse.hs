@@ -26,6 +26,7 @@ module Sphinx.Nonogram.Parse
   ) where
 
 import Data.Char (isSpace)
+import Data.List (foldl')
 
 import Sphinx.Error (SphinxError(..))
 import Sphinx.Nonogram.Types (Nonogram(..), clueLineLength)
