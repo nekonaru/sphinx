@@ -2,7 +2,8 @@
 --
 -- Solutions print as a small aligned table: one row per category,
 -- one column per house. Unsolved puzzles print the same shape with
--- every cell as a question mark.
+-- every cell as a question mark. Alignment assumes single-width
+-- characters.
 module Sphinx.Logic.Render
   ( renderSolution
   , renderPuzzle
@@ -27,12 +28,9 @@ renderSolution puzzle solution = intercalate "\n" (header : body)
     colWidth j = maximum (length ("House " ++ show (j + 1)) : [ length (cell i j) | i <- [0 .. length rows - 1] ])
     colWidths = [ colWidth j | j <- [0 .. n - 1] ]
 
-    labelCell s = padRight labelWidth s ++ "  "
-    cellCell j s = let w = fromMaybe 2 (colWidths !!? j) in padLeft w s ++ "  "
-
-    header = labelCell "" ++ concat [ cellCell j ("House " ++ show (j + 1)) | j <- [0 .. n - 1] ]
+    header = intercalate "  " (padLeft labelWidth "" : [ padLeft (fromMaybe 2 (colWidths !!? j)) ("House " ++ show (j + 1)) | j <- [0 .. n - 1] ])
     body =
-      [ labelCell (categoryName cat) ++ concat [ cellCell j (cell i j) | j <- [0 .. n - 1] ]
+      [ intercalate "  " (padRight labelWidth (categoryName cat) : [ padLeft (fromMaybe 2 (colWidths !!? j)) (cell i j) | j <- [0 .. n - 1] ])
       | (i, cat) <- zip [0 ..] cats
       ]
 

@@ -28,10 +28,12 @@
 -- * @immleft X Y@   X is immediately to the left of Y
 -- * @notsame X Y@   X and Y are in different houses
 --
--- Values may be any non whitespace words (for example @Alice@,
--- @tea@, @red@). Every category must have exactly @houses@ values and
--- values may not repeat across categories. House count is between 2
--- and 6.
+-- Values may be any non whitespace, non control characters (for
+-- example @Alice@, @tea@, @red@). Every category must have exactly
+-- @houses@ values, values may not repeat across categories, and
+-- category names must be unique. House count is between 2 and 6 with
+-- at most 26 categories. Tables are aligned assuming single-width
+-- characters.
 module Sphinx.Logic.DSL
   ( LogicPuzzle(..)
   , LogicCategory(..)
@@ -43,7 +45,8 @@ module Sphinx.Logic.DSL
   , solveWithStats
   ) where
 
-import Data.List (find, nub, permutations, sortBy, isSuffixOf)
+import Data.Char (isControl)
+import Data.List (find, nub, permutations, sortBy, isSuffixOf, foldl')
 import Data.Ord (comparing, Down(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
@@ -82,8 +85,8 @@ newtype LogicSolution = LogicSolution { unLogicSolution :: V.Vector (V.Vector St
 
 -- | Statistics about one logic puzzle solve.
 data SolveStats = SolveStats
-  { logicGuesses :: Int    -- ^ category permutations tried during search
-  , logicPruned :: Int     -- ^ branches pruned by violated clues
+  { logicGuesses :: Int    -- ^ search nodes expanded (one per assignment tried)
+  , logicPruned :: Int     -- ^ permutations eliminated by violated clues
   } deriving (Eq, Show)
 
 -- Value lookup ------------------------------------------------------
@@ -135,13 +138,26 @@ splitSections ls = do
 parseHousesLine :: String -> Either SphinxError Int
 parseHousesLine line =
   case words line of
-    ["houses:", raw]
-      | all isAsciiDigit raw && not (null raw) ->
-          let parsed = read raw :: Int
-          in if parsed >= 2 && parsed <= 6
-               then Right parsed
-               else Left (LogicFormat "houses must be between 2 and 6")
+    ["houses:", raw] -> do
+      n <- parseSmallInt 6 raw
+      if n >= 2
+        then Right n
+        else Left (LogicFormat "houses must be between 2 and 6")
     _ -> Left (LogicFormat "expected 'houses: N' (for example 'houses: 3')")
+
+-- Parse a small non negative integer without relying on 'read',
+-- which can wrap silently on huge literals. At most 6 digits are
+-- accepted, and the result must be at most @hi@.
+parseSmallInt :: Int -> String -> Either SphinxError Int
+parseSmallInt hi raw
+  | null raw = Left (LogicFormat "expected a number")
+  | length raw > 6 = Left (LogicFormat ("number too large: " ++ show raw))
+  | not (all isAsciiDigit raw) = Left (LogicFormat ("expected digits, got " ++ show raw))
+  | otherwise =
+      let v = foldl' (\acc ch -> acc * 10 + (fromEnum ch - fromEnum '0')) 0 raw
+      in if v <= hi
+           then Right v
+           else Left (LogicFormat ("number out of range (maximum " ++ show hi ++ "): " ++ show v))
 
 isAsciiDigit :: Char -> Bool
 isAsciiDigit ch = ch >= '0' && ch <= '9'
@@ -158,7 +174,7 @@ parseCategoryLine line =
           Right (name : values)
     _ -> Left (LogicFormat ("expected 'category name: v1 v2 ...', got " ++ show line))
   where
-    validWord s = not (null s) && s /= ":" && all (\ch -> ch /= ':') s
+    validWord s = not (null s) && s /= ":" && all (\ch -> not (isControl ch) && ch /= ':') s
 
 buildCategory :: [String] -> Either SphinxError LogicCategory
 buildCategory (name : values) = Right (LogicCategory name values)
@@ -167,8 +183,11 @@ buildCategory _ = Left (LogicFormat "unreachable category shape")
 validateShape :: Int -> [LogicCategory] -> Either SphinxError ()
 validateShape n cats
   | null cats = Left (LogicFormat "expected at least one category line")
+  | length cats > 26 = Left (LogicFormat "at most 26 categories are supported")
   | any (\c -> length (categoryValues c) /= n) cats =
       Left (LogicFormat ("every category must have exactly " ++ show n ++ " values"))
+  | length (nub (map categoryName cats)) /= length cats =
+      Left (LogicFormat "category names must be unique")
   | length allValues /= length (nub allValues) =
       Left (LogicFormat "every value may appear only once across all categories")
   | otherwise = Right ()
@@ -182,7 +201,7 @@ validateClues cats houses clues = mapM_ check clues
       _ <- needValue v
       if n >= 1 && n <= houses
         then Right ()
-        else Left (LogicInconsistent ("house number out of range in clue: pos " ++ v ++ " " ++ show n))
+        else Left (LogicFormat ("house number out of range in clue: pos " ++ v ++ " " ++ show n))
     check (Eq a b) = checkPair a b
     check (NextTo a b) = checkPair a b
     check (LeftOf a b) = checkPair a b
@@ -195,15 +214,15 @@ validateClues cats houses clues = mapM_ check clues
       ca <- needValue a
       cb <- needValue b
       if categoryName ca == categoryName cb
-        then Left (LogicInconsistent ("a clue relates two values of the same category: " ++ a ++ " and " ++ b))
+        then Left (LogicFormat ("a clue relates two values of the same category: " ++ a ++ " and " ++ b))
         else Right ()
 
 parseClue :: [String] -> Either SphinxError Clue
 parseClue ws = case ws of
   ["eq", a, b] -> Right (Eq a b)
-  ["pos", a, raw]
-    | all isAsciiDigit raw && not (null raw) -> Right (Pos a (read raw))
-    | otherwise -> Left (LogicFormat ("pos clue needs a house number, got " ++ show raw))
+  ["pos", a, raw] -> do
+    n <- parseSmallInt 6 raw
+    Right (Pos a n)
   ["nextto", a, b] -> Right (NextTo a b)
   ["leftof", a, b] -> Right (LeftOf a b)
   ["immleft", a, b] -> Right (ImmediateLeft a b)

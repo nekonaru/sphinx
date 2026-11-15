@@ -1,4 +1,4 @@
-       House 1  House 2  House 3  
-name     Alice      Bob    Carol  
-drink      tea   coffee    juice  
-color    green      red     blue  
+       House 1  House 2  House 3
+name     Alice      Bob    Carol
+drink      tea   coffee    juice
+color    green      red     blue

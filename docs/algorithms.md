@@ -82,6 +82,13 @@ The same laziness trick as the sudoku solver applies to counting:
 `--count 2` stops as soon as two solutions are known, which is
 sufficient for uniqueness checking.
 
+Input limits: house count is between 2 and 6 and there are at most
+26 categories, so the total search space stays within a few million
+assignments per category and the whole puzzle finishes in well under
+a second for typical clues. Values may contain any non control,
+non whitespace characters; aligning the rendered table assumes
+single-width glyphs.
+
 ## Why these designs
 
 - **Immutability everywhere** makes solvers composable and testable:

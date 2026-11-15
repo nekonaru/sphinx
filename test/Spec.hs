@@ -229,6 +229,12 @@ fuzzSpec = describe "Hostile input fuzzing" $ do
         Left _ -> True
         Right _ -> True
 
+  it "logic parser never crashes on arbitrary strings" $
+    property $ \(s :: String) ->
+      case LD.parseLogic s of
+        Left _ -> True
+        Right _ -> True
+
 zebraTiny :: String
 zebraTiny = unlines
   [ "houses: 3"
@@ -271,9 +277,52 @@ logicSpec = describe "Logic (zebra) puzzles" $ do
 
   it "rejects a clue relating values of the same category" $
     case LD.parseLogic (replaceLine "eq tea green" "eq Alice Bob" zebraTiny) of
-      Left (LogicInconsistent _) -> True `shouldBe` True
-      Left _ -> expectationFailure "expected a LogicInconsistent error"
+      Left (LogicFormat _) -> True `shouldBe` True
+      Left _ -> expectationFailure "expected a LogicFormat error"
       Right _ -> expectationFailure "expected a parse failure"
+
+  it "rejects a bogus overflowing house number" $
+    case LD.parseLogic ("houses: 18446744073709551618\ncategory name: Alice Bob\nclues:\npos Alice 1\n") of
+      Left (LogicFormat _) -> True `shouldBe` True
+      Left _ -> expectationFailure "expected a LogicFormat error"
+      Right _ -> expectationFailure "expected a parse failure"
+
+  it "rejects a bogus overflowing pos house number" $
+    case LD.parseLogic (replaceLine "pos Alice 1" "pos Alice 18446744073709551617" zebraTiny) of
+      Left (LogicFormat _) -> True `shouldBe` True
+      Left _ -> expectationFailure "expected a LogicFormat error"
+      Right _ -> expectationFailure "expected a parse failure"
+
+  it "rejects an out-of-range pos house number" $
+    case LD.parseLogic (replaceLine "pos Alice 1" "pos Alice 5" zebraTiny) of
+      Left (LogicFormat _) -> True `shouldBe` True
+      Left _ -> expectationFailure "expected a LogicFormat error"
+      Right _ -> expectationFailure "expected a parse failure"
+
+  it "rejects duplicate category names" $
+    case LD.parseLogic (unlines ["houses: 2", "category name: Alice Bob", "category name: Carol Dave", "clues:", "pos Alice 1"]) of
+      Left (LogicFormat _) -> True `shouldBe` True
+      Left _ -> expectationFailure "expected a LogicFormat error"
+      Right _ -> expectationFailure "expected a parse failure"
+
+  it "rejects duplicate values across categories" $
+    case LD.parseLogic (unlines ["houses: 2", "category name: Alice Bob", "category drink: tea Alice", "clues:", "pos Alice 1"]) of
+      Left (LogicFormat _) -> True `shouldBe` True
+      Left _ -> expectationFailure "expected a LogicFormat error"
+      Right _ -> expectationFailure "expected a parse failure"
+
+  it "parses CRLF line endings" $
+    case LD.parseLogic (concatMap crlf zebraTiny) of
+      Right _ -> True `shouldBe` True
+      Left e -> expectationFailure (show e)
+
+  it "solves examples/zebra-einstein.txt to the golden output" $ do
+    example <- readFile "examples/zebra-einstein.txt"
+    case LD.parseLogic example of
+      Left e -> expectationFailure (show e)
+      Right p -> case LD.solveLimit 1 p of
+        [sol] -> goldenText "test/golden/zebra-einstein.txt" (LRender.renderSolution p sol)
+        _ -> expectationFailure "expected exactly one solution"
 
   it "rejects a category with the wrong number of values" $
     case LD.parseLogic (replaceLine "category color: red green blue" "category color: red green" zebraTiny) of
@@ -303,10 +352,10 @@ logicSpec = describe "Logic (zebra) puzzles" $ do
       Left e -> expectationFailure (show e)
       Right p -> length (LD.solveLimit 2 p) `shouldBe` 1
 
-  it "finds multiple solutions for the underconstrained puzzle" $
+  it "finds all 3 solutions for the underconstrained puzzle" $
     case LD.parseLogic zebraUnderconstrained of
       Left e -> expectationFailure (show e)
-      Right p -> length (LD.solveLimit 2 p) `shouldBe` 2
+      Right p -> length (LD.solveLimit 100 p) `shouldBe` 3
 
   it "solves through the shared typeclass interface" $
     case parsePuzzle zebraTiny :: Either SphinxError LD.LogicPuzzle of
@@ -328,6 +377,11 @@ replaceLine old new input =
   in case rest of
        [] -> input
        (_ : after) -> unlines (before ++ [new] ++ after)
+
+-- Replace each LF with CRLF.
+crlf :: Char -> String
+crlf '\n' = "\r\n"
+crlf c = [c]
 
 heartPuzzle :: String
 heartPuzzle = unlines ["2 2", "7", "7", "5", "3", "1", "---", "2", "4", "5", "5", "5", "4", "2"]
