@@ -128,8 +128,7 @@ generateSudoku difficulty seed = dig cellOrder full
     dig (i : is) g
       | givens g <= givenTarget difficulty = g
       | otherwise =
-          let saved = getCell g i
-              g' = setCell i 0 g
+          let g' = setCell i 0 g
           in if length (solveUpTo 2 g') == 1
                then dig is g'
                else dig is g

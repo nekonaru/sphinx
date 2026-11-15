@@ -1,6 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Uniform 'Puzzle' interface for nonograms.
+--
+-- The instance lives here, in its own module, to keep the solver
+-- modules free of interface plumbing. The orphan warning is relaxed
+-- for this reason.
 module Sphinx.Nonogram.Puzzle
   (
   ) where
